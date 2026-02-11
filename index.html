@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checklist SAMU 2026</title>
-    <!-- Tailwind CSS para o design -->
+    <title>Sistema de Checklist da Ambulância Básica - HACO</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React e Babel para rodar o código no navegador -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -23,11 +20,11 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
 
         // --- CONFIGURAÇÃO ---
-        // COLE A URL DO SEU GOOGLE APPS SCRIPT AQUI ENTRE AS ASPAS
-        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwchx-G7pmoAZvsogOXcC2dp7if6aVYoKSHIv-Hcyqbrt4aYnF_zS5VXq6xOU2hiLAQ/exec"; 
+        // COLE A URL DO SEU GOOGLE APPS SCRIPT AQUI
+        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec"; 
 
         const CATEGORIES = [
             { id: 'info', label: 'Início', icon: 'user' },
@@ -62,20 +59,24 @@
         ];
 
         function App() {
+            const [mode, setMode] = useState('user'); // 'user', 'login', 'admin'
             const [currentStep, setCurrentStep] = useState(0);
             const [loading, setLoading] = useState(false);
             const [submitted, setSubmitted] = useState(false);
             const [formData, setFormData] = useState({
-                placa: '',
-                responsavel: '',
+                placa: '', responsavel: '',
                 items: CHECKLIST_ITEMS.reduce((acc, item) => {
                     acc[item.id] = { status: 'C', obs: '' };
                     return acc;
                 }, {})
             });
 
-            // Atualiza ícones após renderizar
-            useEffect(() => { lucide.createIcons(); }, [currentStep, submitted]);
+            // Admin States
+            const [adminData, setAdminData] = useState([]);
+            const [loginData, setLoginData] = useState({ user: '', pass: '' });
+            const [adminSearch, setAdminSearch] = useState('');
+
+            useEffect(() => { lucide.createIcons(); });
 
             const handleNext = () => {
                 if (currentStep === 0 && (!formData.placa || !formData.responsavel)) {
@@ -91,27 +92,11 @@
                 window.scrollTo(0, 0);
             };
 
-            const handleStatusChange = (id, status) => {
-                setFormData(prev => ({
-                    ...prev,
-                    items: { ...prev.items, [id]: { ...prev.items[id], status } }
-                }));
-            };
-
-            const handleObsChange = (id, obs) => {
-                setFormData(prev => ({
-                    ...prev,
-                    items: { ...prev.items, [id]: { ...prev.items[id], obs } }
-                }));
-            };
-
             const handleSubmit = async () => {
-                if (!GOOGLE_SHEET_URL) {
-                    alert("Erro: URL do Google Sheets não configurada.");
-                    return;
-                }
+                if (!GOOGLE_SHEET_URL) return alert("URL da planilha não configurada.");
                 setLoading(true);
                 const payload = {
+                    action: 'write',
                     timestamp: new Date().toLocaleString('pt-BR'),
                     placa: formData.placa,
                     responsavel: formData.responsavel,
@@ -122,20 +107,49 @@
                         obs: val.obs
                     }))
                 };
-
                 try {
-                    await fetch(GOOGLE_SHEET_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify(payload)
-                    });
+                    await fetch(GOOGLE_SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                     setSubmitted(true);
+                } catch (e) { alert("Erro ao salvar."); }
+                finally { setLoading(false); }
+            };
+
+            const handleAdminLogin = (e) => {
+                e.preventDefault();
+                if (loginData.user === 'admin' && loginData.pass === 'sdenf2026') {
+                    fetchAdminData();
+                    setMode('admin');
+                } else {
+                    alert("Credenciais incorretas.");
+                }
+            };
+
+            const fetchAdminData = async () => {
+                setLoading(true);
+                try {
+                    const response = await fetch(`${GOOGLE_SHEET_URL}?action=read`);
+                    const data = await response.json();
+                    // Agrupar por timestamp + placa para ver checklists completos
+                    const grouped = data.reduce((acc, row) => {
+                        const key = `${row[0]}_${row[1]}`; // Timestamp + Placa
+                        if (!acc[key]) acc[key] = { date: row[0], placa: row[1], user: row[2], items: [] };
+                        acc[key].items.push({ cat: row[3], name: row[4], status: row[5], obs: row[6] });
+                        return acc;
+                    }, {});
+                    setAdminData(Object.values(grouped).reverse());
                 } catch (e) {
-                    alert("Erro ao conectar com a planilha.");
+                    console.error("Erro ao ler dados:", e);
                 } finally {
                     setLoading(false);
                 }
             };
+
+            const filteredAdmin = useMemo(() => {
+                return adminData.filter(d => 
+                    d.placa.toLowerCase().includes(adminSearch.toLowerCase()) || 
+                    d.user.toLowerCase().includes(adminSearch.toLowerCase())
+                );
+            }, [adminData, adminSearch]);
 
             if (submitted) {
                 return (
@@ -143,13 +157,87 @@
                         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
                             <i data-lucide="check-circle-2" className="text-green-600 w-12 h-12"></i>
                         </div>
-                        <h1 className="text-2xl font-black mb-2 uppercase">Registrado!</h1>
-                        <p className="text-slate-500 mb-8">O checklist foi enviado para a planilha.</p>
+                        <h1 className="text-2xl font-black mb-2 uppercase tracking-tighter">Registrado!</h1>
+                        <p className="text-slate-500 mb-8">Checklist enviado com sucesso.</p>
                         <button onClick={() => window.location.reload()} className="w-full max-w-xs bg-red-600 text-white font-bold py-4 rounded-2xl shadow-lg">Novo Checklist</button>
                     </div>
                 );
             }
 
+            // MODO ADMIN
+            if (mode === 'admin') {
+                return (
+                    <div className="min-h-screen bg-slate-100 pb-20">
+                        <header className="bg-slate-900 text-white p-4 sticky top-0 z-50 flex justify-between items-center shadow-xl">
+                            <h1 className="font-black text-sm uppercase tracking-widest flex items-center gap-2">
+                                <i data-lucide="shield-check" className="w-5 h-5 text-red-500"></i> Painel Admin
+                            </h1>
+                            <button onClick={() => setMode('user')} className="text-[10px] font-bold bg-white/10 px-3 py-1 rounded-lg">Sair</button>
+                        </header>
+                        
+                        <div className="p-4 max-w-2xl mx-auto space-y-4">
+                            <div className="relative">
+                                <i data-lucide="search" className="absolute left-4 top-3.5 w-4 h-4 text-slate-400"></i>
+                                <input 
+                                    type="text" 
+                                    placeholder="Filtrar por placa ou nome..." 
+                                    className="w-full pl-10 pr-4 py-3 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-red-500"
+                                    value={adminSearch}
+                                    onChange={e => setAdminSearch(e.target.value)}
+                                />
+                            </div>
+
+                            {loading ? (
+                                <div className="text-center py-20"><i data-lucide="loader-2" className="animate-spin mx-auto w-8 h-8 text-red-600"></i></div>
+                            ) : filteredAdmin.map((reg, i) => (
+                                <div key={i} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 space-y-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-black text-lg text-slate-800">{reg.placa}</h3>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase">{reg.user}</p>
+                                        </div>
+                                        <span className="text-[9px] font-black bg-slate-100 px-2 py-1 rounded-md text-slate-500">{reg.date}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 pt-2 border-t">
+                                        {reg.items.some(it => it.status === 'NC') ? (
+                                            reg.items.filter(it => it.status === 'NC').map((it, idx) => (
+                                                <div key={idx} className="bg-red-50 text-red-700 text-[9px] font-black px-2 py-1 rounded border border-red-100 flex flex-col">
+                                                    <span>{it.name}</span>
+                                                    {it.obs && <span className="opacity-70 font-normal italic">Obs: {it.obs}</span>}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <span className="text-[10px] text-green-600 font-bold flex items-center gap-1"><i data-lucide="check" className="w-3 h-3"></i> Tudo Conforme</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            // MODO LOGIN
+            if (mode === 'login') {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-900">
+                        <form onSubmit={handleAdminLogin} className="w-full max-w-xs bg-white p-8 rounded-[40px] shadow-2xl space-y-6">
+                            <div className="text-center">
+                                <h2 className="text-2xl font-black uppercase tracking-tighter">Acesso Admin</h2>
+                                <p className="text-xs text-slate-400 font-bold">SDENF 2026</p>
+                            </div>
+                            <div className="space-y-4">
+                                <input type="text" placeholder="Usuário" className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-red-600 outline-none" onChange={e => setLoginData({...loginData, user: e.target.value})} />
+                                <input type="password" placeholder="Senha" className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-red-600 outline-none" onChange={e => setLoginData({...loginData, pass: e.target.value})} />
+                            </div>
+                            <button type="submit" className="w-full bg-red-600 text-white font-black py-4 rounded-2xl shadow-lg">Entrar</button>
+                            <button type="button" onClick={() => setMode('user')} className="w-full text-slate-400 text-xs font-bold">Voltar ao Checklist</button>
+                        </form>
+                    </div>
+                );
+            }
+
+            // MODO USUÁRIO (CHECKLIST)
             const currentCategory = CATEGORIES[currentStep].id;
             const items = CHECKLIST_ITEMS.filter(i => i.category === currentCategory);
 
@@ -160,15 +248,13 @@
                             <i data-lucide="truck" className="w-6 h-6"></i>
                             <h1 className="font-black text-lg italic">SAMU CHECKLIST</h1>
                         </div>
-                        <div className="bg-red-800 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                            {currentStep + 1} / {CATEGORIES.length}
-                        </div>
+                        <button onClick={() => setMode('login')} className="bg-white/20 p-2 rounded-xl"><i data-lucide="settings" className="w-5 h-5"></i></button>
                     </header>
 
                     <nav className="bg-white border-b flex overflow-x-auto no-scrollbar sticky top-[60px] z-40">
                         {CATEGORIES.map((cat, idx) => (
                             <div key={cat.id} className={`flex-1 min-w-[70px] py-3 flex flex-col items-center gap-1 border-b-4 ${idx === currentStep ? 'border-red-600 text-red-600 bg-red-50' : 'border-transparent text-slate-300'}`}>
-                                <i data-lucide={cat.icon} className="w-5 h-5"></i>
+                                <i data-lucide={cat.icon} className="w-4 h-4"></i>
                                 <span className="text-[8px] font-bold uppercase">{cat.label}</span>
                             </div>
                         ))}
@@ -176,36 +262,28 @@
 
                     <main className="max-w-md mx-auto p-4 mt-4">
                         {currentCategory === 'info' && (
-                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
+                            <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 space-y-4">
                                 <h2 className="text-xl font-black text-slate-800 uppercase">Dados Iniciais</h2>
                                 <div className="space-y-4">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Viatura / Placa</label>
-                                        <input type="text" placeholder="EX: ABC-1234" className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-black text-lg" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Responsável</label>
-                                        <input type="text" placeholder="Seu nome" className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value})} />
-                                    </div>
+                                    <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-black text-lg" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
+                                    <input type="text" placeholder="NOME DO RESPONSÁVEL" className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value})} />
                                 </div>
                             </div>
                         )}
 
                         {items.length > 0 && (
                             <div className="space-y-4">
-                                <h2 className="text-xl font-black text-slate-800 uppercase flex items-center gap-2">
-                                    <div className="w-2 h-6 bg-red-600 rounded-full"></div> {currentCategory}
-                                </h2>
+                                <h2 className="text-xl font-black text-slate-800 ml-1 uppercase">{currentCategory}</h2>
                                 {items.map(item => (
-                                    <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200">
+                                    <div key={item.id} className="bg-white p-5 rounded-[32px] shadow-sm border border-slate-200">
                                         <div className="flex justify-between items-center mb-4">
-                                            <span className="font-bold text-slate-800">{item.label}</span>
+                                            <span className="font-bold text-slate-700">{item.label}</span>
                                             <div className="flex bg-slate-100 p-1 rounded-2xl">
-                                                <button onClick={() => handleStatusChange(item.id, 'C')} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-md' : 'text-slate-400'}`}>C</button>
-                                                <button onClick={() => handleStatusChange(item.id, 'NC')} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-md' : 'text-slate-400'}`}>NC</button>
+                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-md' : 'text-slate-400'}`}>C</button>
+                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-md' : 'text-slate-400'}`}>NC</button>
                                             </div>
                                         </div>
-                                        <input type="text" placeholder="Observação..." className="w-full p-3 text-sm rounded-xl bg-slate-50 border-2 border-transparent focus:border-blue-400 outline-none" value={formData.items[item.id].obs} onChange={e => handleObsChange(item.id, e.target.value)} />
+                                        <input type="text" placeholder="Observação..." className="w-full p-3 text-sm rounded-xl bg-slate-50 border-2 border-transparent focus:border-blue-400 outline-none" value={formData.items[item.id].obs} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
                                     </div>
                                 ))}
                             </div>
@@ -213,36 +291,21 @@
 
                         {currentCategory === 'revisar' && (
                             <div className="space-y-6">
-                                <div className="bg-white p-6 rounded-3xl border-2 border-slate-100 shadow-sm">
-                                    <h2 className="text-xl font-black text-slate-800 mb-4 uppercase">Revisão</h2>
-                                    <div className="space-y-3">
-                                        <p className="text-sm font-bold flex justify-between uppercase"><span className="text-slate-400">Viatura:</span> {formData.placa}</p>
-                                        <p className="text-sm font-bold flex justify-between uppercase"><span className="text-slate-400">Responsável:</span> {formData.responsavel}</p>
-                                        <div className="pt-4 border-t">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase mb-2 italic">Problemas (NC):</p>
-                                            {Object.entries(formData.items).filter(([_,v]) => v.status === 'NC').length === 0 ? (
-                                                <p className="text-green-600 font-bold text-sm">Nenhum problema detectado.</p>
-                                            ) : (
-                                                <div className="space-y-1">
-                                                    {Object.entries(formData.items).filter(([_,v]) => v.status === 'NC').map(([id]) => (
-                                                        <p key={id} className="text-xs font-black text-red-600">• {CHECKLIST_ITEMS.find(i=>i.id===id).label}</p>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                <div className="bg-white p-6 rounded-[32px] border-2 border-slate-100 shadow-sm">
+                                    <h2 className="text-xl font-black text-slate-800 mb-4 uppercase italic">Finalizar</h2>
+                                    <p className="text-xs font-bold text-slate-400 mb-4">Confira se os dados da {formData.placa} estão corretos.</p>
+                                    <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-5 rounded-3xl shadow-2xl flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95 transition-all">
+                                        {loading ? 'Sincronizando...' : 'Gravar na Planilha'}
+                                    </button>
                                 </div>
-                                <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-5 rounded-3xl shadow-2xl flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95 transition-all">
-                                    {loading ? 'Processando...' : 'Gravar no Google Sheets'}
-                                </button>
                             </div>
                         )}
                     </main>
 
-                    <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t flex gap-4">
+                    <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t flex gap-3">
                         <div className="max-w-md mx-auto w-full flex gap-3">
-                            {currentStep > 0 && <button onClick={handlePrev} className="flex-1 bg-white border-2 border-slate-200 text-slate-500 font-black py-4 rounded-2xl uppercase text-xs">Anterior</button>}
-                            {currentStep < CATEGORIES.length - 1 && <button onClick={handleNext} className="flex-[2] bg-red-600 text-white font-black py-4 rounded-2xl shadow-lg uppercase text-xs tracking-widest">Próximo</button>}
+                            {currentStep > 0 && <button onClick={handlePrev} className="flex-1 bg-white border-2 border-slate-200 text-slate-500 font-black py-4 rounded-2xl uppercase text-[10px]">Anterior</button>}
+                            {currentStep < CATEGORIES.length - 1 && <button onClick={handleNext} className="flex-[2] bg-red-600 text-white font-black py-4 rounded-2xl shadow-lg uppercase text-[10px] tracking-widest">Próximo</button>}
                         </div>
                     </footer>
                 </div>
