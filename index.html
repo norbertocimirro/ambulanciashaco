@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMBULÂNCIA BÁSICA - Checklist (HACO)</title>
+    <title>HACO - Checklist Ambulância Básica</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -25,7 +25,6 @@
         const { useState, useEffect, useMemo } = React;
 
         // --- CONFIGURAÇÃO ---
-        // COLE A URL DO SEU GOOGLE APPS SCRIPT AQUI
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec"; 
 
         const CATEGORIES = [
@@ -88,7 +87,6 @@
                 }
             }, [message, currentStep, mode, submitted]);
 
-            // Gera a data EXATA em GMT-3 como String para evitar conversões erradas
             const getBrasilDateTime = () => {
                 const now = new Date();
                 const formatter = new Intl.DateTimeFormat('pt-BR', {
@@ -97,6 +95,19 @@
                     hour: '2-digit', minute: '2-digit', second: '2-digit'
                 });
                 return formatter.format(now);
+            };
+
+            const formatDisplayDate = (dateVal) => {
+                if (!dateVal) return "---";
+                if (typeof dateVal === 'string' && dateVal.includes('T') && dateVal.includes('Z')) {
+                    try {
+                        const d = new Date(dateVal);
+                        return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                    } catch (e) {
+                        return dateVal;
+                    }
+                }
+                return dateVal;
             };
 
             const handleNext = () => {
@@ -119,7 +130,7 @@
                 
                 const payload = {
                     action: 'write',
-                    timestamp: getBrasilDateTime(), // String já formatada
+                    timestamp: getBrasilDateTime(), 
                     placa: formData.placa,
                     responsavel: formData.responsavel,
                     items: Object.entries(formData.items).map(([id, val]) => ({
@@ -161,10 +172,10 @@
                     const data = await response.json();
                     
                     const grouped = data.reduce((acc, row) => {
-                        // row[0] é o Timestamp string
-                        const key = `${row[0]}_${row[1]}`;
+                        const displayDate = formatDisplayDate(row[0]);
+                        const key = `${displayDate}_${row[1]}`;
                         if (!acc[key]) {
-                            acc[key] = { date: row[0], placa: row[1], user: row[2], items: [] };
+                            acc[key] = { date: displayDate, placa: row[1], user: row[2], items: [] };
                         }
                         acc[key].items.push({ cat: row[3], name: row[4], status: row[5], obs: row[6] });
                         return acc;
@@ -178,14 +189,21 @@
                 }
             };
 
+            const handleLogout = () => {
+                setMode('user');
+                setCurrentStep(0);
+                setAdminSearch('');
+                setAdminData([]);
+            };
+
             const filteredAdmin = useMemo(() => {
                 return adminData.filter(d => 
                     d.placa.toLowerCase().includes(adminSearch.toLowerCase()) || 
-                    d.user.toLowerCase().includes(adminSearch.toLowerCase())
+                    d.user.toLowerCase().includes(adminSearch.toLowerCase()) ||
+                    d.date.toLowerCase().includes(adminSearch.toLowerCase())
                 );
             }, [adminData, adminSearch]);
 
-            // --- UI COMPONENTS ---
             const MessageBox = () => message && (
                 <div className={`fixed top-20 left-4 right-4 z-[100] p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-fade-in ${message.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>
                     <i data-lucide={message.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-6 h-6"></i>
@@ -200,13 +218,12 @@
                             <i data-lucide="shield-check" className="text-green-600 w-12 h-12"></i>
                         </div>
                         <h1 className="text-3xl font-black mb-2 uppercase tracking-tight">Enviado!</h1>
-                        <p className="text-slate-400 mb-8 font-medium italic">Dados salvos</p>
-                        <button onClick={() => window.location.reload()} className="w-full max-w-xs bg-slate-900 text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all">NOVA VERIFICAÇÃO</button>
+                        <p className="text-slate-400 mb-8 font-medium italic">Dados salvos com horário de Brasília.</p>
+                        <button onClick={() => window.location.reload()} className="w-full max-w-xs bg-slate-900 text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all text-[10px] tracking-widest uppercase">NOVA VERIFICAÇÃO</button>
                     </div>
                 );
             }
 
-            // --- ADMIN VIEW ---
             if (mode === 'admin') {
                 return (
                     <div className="min-h-screen bg-slate-100 pb-20 animate-fade-in">
@@ -216,29 +233,31 @@
                                 <i data-lucide="bar-chart-3" className="w-5 h-5 text-red-500"></i>
                                 <h1 className="font-black text-xs uppercase tracking-widest">Painel Gestão</h1>
                             </div>
-                            <button onClick={() => setMode('user')} className="bg-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Sair</button>
+                            <button onClick={handleLogout} className="bg-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Sair</button>
                         </header>
                         
                         <div className="p-4 max-w-2xl mx-auto space-y-4">
                             <div className="bg-white p-2 rounded-2xl shadow-sm flex items-center px-4 gap-3 border border-slate-200">
                                 <i data-lucide="search" className="w-4 h-4 text-slate-400"></i>
-                                <input type="text" placeholder="Filtrar por Viatura ou Nome..." className="w-full py-3 border-none focus:ring-0 outline-none font-medium text-sm bg-transparent" value={adminSearch} onChange={e => setAdminSearch(e.target.value)} />
+                                <input type="text" placeholder="Viatura, Nome ou Data (Ex: 10/02)..." className="w-full py-3 border-none focus:ring-0 outline-none font-medium text-sm bg-transparent" value={adminSearch} onChange={e => setAdminSearch(e.target.value)} />
                             </div>
 
                             {loading ? (
                                 <div className="text-center py-24 flex flex-col items-center gap-4 text-slate-400">
                                     <i data-lucide="loader-2" className="animate-spin w-8 h-8"></i>
-                                    <p className="font-black text-[10px] uppercase">Sincronizando Relatórios...</p>
+                                    <p className="font-black text-[10px] uppercase tracking-widest">Carregando Auditoria...</p>
                                 </div>
+                            ) : filteredAdmin.length === 0 ? (
+                                <div className="text-center py-20 text-slate-400 font-bold uppercase text-[10px] tracking-widest leading-none">Nenhum registro encontrado para esta busca</div>
                             ) : filteredAdmin.map((reg, i) => (
-                                <div key={i} className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden animate-fade-in">
+                                <div key={i} className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden animate-fade-in mb-4">
                                     <div className="p-5 bg-slate-50 border-b flex justify-between items-center">
                                         <div>
-                                            <h3 className="font-black text-xl text-slate-800">{reg.placa}</h3>
+                                            <h3 className="font-black text-xl text-slate-800 tracking-tighter leading-none mb-1">{reg.placa}</h3>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{reg.user}</p>
                                         </div>
                                         <div className="text-right">
-                                            <div className="bg-blue-50 text-blue-700 text-[9px] font-black px-2 py-1 rounded-lg mb-1 inline-block">GMT-3</div>
+                                            <div className="bg-blue-50 text-blue-700 text-[9px] font-black px-2 py-1 rounded-lg mb-1 inline-block uppercase tracking-tighter">Horário Brasília</div>
                                             <p className="text-[10px] font-bold text-slate-600 block">{reg.date}</p>
                                         </div>
                                     </div>
@@ -257,7 +276,7 @@
                                             ) : (
                                                 <div className="bg-green-50 p-4 rounded-2xl flex items-center gap-3 text-green-700">
                                                     <i data-lucide="check-circle" className="w-5 h-5"></i>
-                                                    <span className="text-xs font-black uppercase">Materiais em conformidade</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">Viatura Operacional</span>
                                                 </div>
                                             )}
                                         </div>
@@ -269,7 +288,6 @@
                 );
             }
 
-            // --- LOGIN VIEW ---
             if (mode === 'login') {
                 return (
                     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-900 animate-fade-in">
@@ -285,14 +303,13 @@
                                 <input type="text" placeholder="USUÁRIO" className="w-full p-4 bg-slate-100 rounded-2xl border-none focus:ring-2 focus:ring-red-600 outline-none font-bold uppercase text-center" value={loginData.user} onChange={e => setLoginData({...loginData, user: e.target.value})} />
                                 <input type="password" placeholder="SENHA" className="w-full p-4 bg-slate-100 rounded-2xl border-none focus:ring-2 focus:ring-red-600 outline-none font-bold text-center" value={loginData.pass} onChange={e => setLoginData({...loginData, pass: e.target.value})} />
                             </div>
-                            <button type="submit" className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest text-sm">Entrar</button>
-                            <button type="button" onClick={() => setMode('user')} className="w-full text-slate-400 text-[10px] font-black uppercase">Voltar ao Checklist</button>
+                            <button type="submit" className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest text-[10px]">Entrar</button>
+                            <button type="button" onClick={handleLogout} className="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest">Voltar ao Checklist</button>
                         </form>
                     </div>
                 );
             }
 
-            // --- USER CHECKLIST VIEW ---
             const currentCategory = CATEGORIES[currentStep].id;
             const items = CHECKLIST_ITEMS.filter(i => i.category === currentCategory);
 
@@ -305,8 +322,8 @@
                                 <i data-lucide="truck" className="w-5 h-5 text-red-600"></i>
                             </div>
                             <div>
-                                <h1 className="font-black text-lg italic tracking-tighter">SAMU CHECKLIST</h1>
-                                <p className="text-[8px] font-black uppercase opacity-60">Fuso Horário Canoas/RS</p>
+                                <h1 className="font-black text-lg italic tracking-tighter leading-none">Checklist Ambulância Básica</h1>
+                                <p className="text-[8px] font-black uppercase opacity-60">Hospital de Aeronáutica de Canoas</p>
                             </div>
                         </div>
                         <button onClick={() => setMode('login')} className="bg-white/20 p-2.5 rounded-2xl border border-white/20">
@@ -330,13 +347,13 @@
                     <main className="max-w-md mx-auto p-4 mt-4">
                         {currentCategory === 'info' && (
                             <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-6">
-                                <div className="space-y-1">
-                                    <h2 className="text-xl font-black text-slate-800 uppercase leading-none">Conferência</h2>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic mt-1">Dados de Identificação</p>
+                                <div className="space-y-1 text-center">
+                                    <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Identificação</h2>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic leading-none">Conferência Diária de Viatura</p>
                                 </div>
-                                <div className="space-y-4">
-                                    <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-black text-xl placeholder:text-slate-200 uppercase" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
-                                    <input type="text" placeholder="ENFERMEIRO / RESPONSÁVEL" className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold placeholder:text-slate-200 uppercase" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value.toUpperCase()})} />
+                                <div className="space-y-4 pt-2">
+                                    <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-black text-xl placeholder:text-slate-200 uppercase text-center" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
+                                    <input type="text" placeholder="ENFERMEIRO / RESPONSÁVEL" className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold placeholder:text-slate-200 uppercase text-center" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value.toUpperCase()})} />
                                 </div>
                             </div>
                         )}
@@ -352,8 +369,8 @@
                                         <div className="flex justify-between items-center mb-5">
                                             <span className="font-bold text-slate-800 tracking-tight text-base pr-4 leading-tight">{item.label}</span>
                                             <div className="flex bg-slate-100 p-1.5 rounded-2xl shrink-0 shadow-inner">
-                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-lg' : 'text-slate-400'}`}>C</button>
-                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-lg' : 'text-slate-400'}`}>NC</button>
+                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-lg scale-105' : 'text-slate-400'}`}>C</button>
+                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-lg scale-105' : 'text-slate-400'}`}>NC</button>
                                             </div>
                                         </div>
                                         <div className="relative">
@@ -369,17 +386,17 @@
                             <div className="space-y-6">
                                 <div className="bg-white p-8 rounded-[3rem] border-2 border-slate-100 shadow-xl space-y-6">
                                     <div className="flex flex-col items-center">
-                                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 text-red-600 font-black text-2xl">?</div>
-                                        <h2 className="text-2xl font-black text-slate-800 uppercase italic">Concluir</h2>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Viatura: {formData.placa}</p>
+                                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 text-red-600 font-black text-2xl tracking-tighter italic">OK</div>
+                                        <h2 className="text-2xl font-black text-slate-800 uppercase italic tracking-tighter">Enviar Agora</h2>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Conferência: {formData.placa}</p>
                                     </div>
                                     <div className="bg-slate-50 p-5 rounded-3xl space-y-2 border border-slate-100">
-                                        <div className="flex justify-between text-[10px] font-black uppercase"><span className="text-slate-400 tracking-widest">Responsável</span> <span className="text-slate-900">{formData.responsavel}</span></div>
-                                        <div className="flex justify-between text-[10px] font-black uppercase"><span className="text-slate-400 tracking-widest">Horário Atual</span> <span className="text-red-600">{getBrasilDateTime()}</span></div>
+                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter"><span className="text-slate-400">Responsável</span> <span className="text-slate-900">{formData.responsavel}</span></div>
+                                        <div className="flex justify-between text-[10px] font-black uppercase tracking-tighter"><span className="text-slate-400">Horário Registro</span> <span className="text-red-600">{getBrasilDateTime()}</span></div>
                                     </div>
-                                    <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-6 rounded-3xl shadow-2xl flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all text-sm">
+                                    <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-6 rounded-3xl shadow-2xl flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all text-[10px]">
                                         {loading ? <i data-lucide="loader-2" className="animate-spin"></i> : <i data-lucide="send"></i>}
-                                        {loading ? 'GRAVANDO...' : 'ENVIAR AGORA'}
+                                        {loading ? 'GRAVANDO...' : 'FINALIZAR E GRAVAR'}
                                     </button>
                                 </div>
                             </div>
