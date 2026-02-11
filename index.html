@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAMU - Sistema de Checklist (GMT-3)</title>
+    <title>AMBULÂNCIA BÁSICA - Checklist (HACO)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -11,11 +11,11 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .animate-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -61,10 +61,12 @@
         ];
 
         function App() {
-            const [mode, setMode] = useState('user'); // 'user', 'login', 'admin'
+            const [mode, setMode] = useState('user'); 
             const [currentStep, setCurrentStep] = useState(0);
             const [loading, setLoading] = useState(false);
             const [submitted, setSubmitted] = useState(false);
+            const [message, setMessage] = useState(null);
+            
             const [formData, setFormData] = useState({
                 placa: '', responsavel: '',
                 items: CHECKLIST_ITEMS.reduce((acc, item) => {
@@ -80,24 +82,26 @@
 
             useEffect(() => { 
                 if (window.lucide) window.lucide.createIcons(); 
-            });
+                if (message) {
+                    const timer = setTimeout(() => setMessage(null), 4000);
+                    return () => clearTimeout(timer);
+                }
+            }, [message, currentStep, mode, submitted]);
 
-            // Função para formatar data em GMT-3 explicitamente
-            const getBrasilTime = () => {
-                return new Date().toLocaleString('pt-BR', { 
+            // Gera a data EXATA em GMT-3 como String para evitar conversões erradas
+            const getBrasilDateTime = () => {
+                const now = new Date();
+                const formatter = new Intl.DateTimeFormat('pt-BR', {
                     timeZone: 'America/Sao_Paulo',
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
                 });
+                return formatter.format(now);
             };
 
             const handleNext = () => {
                 if (currentStep === 0 && (!formData.placa || !formData.responsavel)) {
-                    alert("Preencha a placa e o responsável.");
+                    setMessage({ type: 'error', text: 'Preencha a placa e o seu nome.' });
                     return;
                 }
                 setCurrentStep(prev => Math.min(prev + 1, CATEGORIES.length - 1));
@@ -110,12 +114,12 @@
             };
 
             const handleSubmit = async () => {
-                if (!GOOGLE_SHEET_URL) return alert("URL da planilha não configurada.");
+                if (!GOOGLE_SHEET_URL) return setMessage({ type: 'error', text: 'Configure a URL da Planilha!' });
                 setLoading(true);
                 
                 const payload = {
                     action: 'write',
-                    timestamp: getBrasilTime(),
+                    timestamp: getBrasilDateTime(), // String já formatada
                     placa: formData.placa,
                     responsavel: formData.responsavel,
                     items: Object.entries(formData.items).map(([id, val]) => ({
@@ -134,7 +138,7 @@
                     });
                     setSubmitted(true);
                 } catch (e) { 
-                    alert("Erro ao salvar os dados."); 
+                    setMessage({ type: 'error', text: 'Erro ao conectar com o servidor.' });
                 } finally { 
                     setLoading(false); 
                 }
@@ -146,7 +150,7 @@
                     fetchAdminData();
                     setMode('admin');
                 } else {
-                    alert("Usuário ou senha inválidos.");
+                    setMessage({ type: 'error', text: 'Acesso Negado.' });
                 }
             };
 
@@ -156,33 +160,19 @@
                     const response = await fetch(`${GOOGLE_SHEET_URL}?action=read`);
                     const data = await response.json();
                     
-                    // Agrupar registros: usa a combinação de Data + Placa para identificar um checklist único
                     const grouped = data.reduce((acc, row) => {
-                        const timestampStr = String(row[0]);
-                        const placa = row[1];
-                        const key = `${timestampStr}_${placa}`;
-                        
+                        // row[0] é o Timestamp string
+                        const key = `${row[0]}_${row[1]}`;
                         if (!acc[key]) {
-                            acc[key] = { 
-                                date: timestampStr, 
-                                placa: placa, 
-                                user: row[2], 
-                                items: [] 
-                            };
+                            acc[key] = { date: row[0], placa: row[1], user: row[2], items: [] };
                         }
-                        acc[key].items.push({ 
-                            cat: row[3], 
-                            name: row[4], 
-                            status: row[5], 
-                            obs: row[6] 
-                        });
+                        acc[key].items.push({ cat: row[3], name: row[4], status: row[5], obs: row[6] });
                         return acc;
                     }, {});
                     
                     setAdminData(Object.values(grouped).reverse());
                 } catch (e) {
-                    console.error("Erro ao ler dados da planilha:", e);
-                    alert("Não foi possível carregar os registros.");
+                    setMessage({ type: 'error', text: 'Erro ao buscar dados.' });
                 } finally {
                     setLoading(false);
                 }
@@ -195,80 +185,79 @@
                 );
             }, [adminData, adminSearch]);
 
+            // --- UI COMPONENTS ---
+            const MessageBox = () => message && (
+                <div className={`fixed top-20 left-4 right-4 z-[100] p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-fade-in ${message.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>
+                    <i data-lucide={message.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-6 h-6"></i>
+                    <span className="font-bold text-sm uppercase">{message.text}</span>
+                </div>
+            );
+
             if (submitted) {
                 return (
-                    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-white animate-in">
-                        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                            <i data-lucide="check-circle" className="text-green-600 w-12 h-12"></i>
+                    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-white animate-fade-in">
+                        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                            <i data-lucide="shield-check" className="text-green-600 w-12 h-12"></i>
                         </div>
-                        <h1 className="text-3xl font-black mb-2 uppercase tracking-tight">Sucesso!</h1>
-                        <p className="text-slate-500 mb-8 font-medium">O checklist da viatura {formData.placa} foi salvo.</p>
-                        <button onClick={() => window.location.reload()} className="w-full max-w-xs bg-red-600 text-white font-black py-5 rounded-[2rem] shadow-xl active:scale-95 transition-all">NOVA VERIFICAÇÃO</button>
+                        <h1 className="text-3xl font-black mb-2 uppercase tracking-tight">Enviado!</h1>
+                        <p className="text-slate-400 mb-8 font-medium italic">Dados salvos</p>
+                        <button onClick={() => window.location.reload()} className="w-full max-w-xs bg-slate-900 text-white font-black py-5 rounded-3xl shadow-xl active:scale-95 transition-all">NOVA VERIFICAÇÃO</button>
                     </div>
                 );
             }
 
-            // --- TELA ADMIN ---
+            // --- ADMIN VIEW ---
             if (mode === 'admin') {
                 return (
-                    <div className="min-h-screen bg-slate-100 pb-20 animate-in">
-                        <header className="bg-slate-900 text-white p-4 sticky top-0 z-50 flex justify-between items-center shadow-2xl">
+                    <div className="min-h-screen bg-slate-100 pb-20 animate-fade-in">
+                        <MessageBox />
+                        <header className="bg-slate-900 text-white p-4 sticky top-0 z-50 flex justify-between items-center shadow-xl">
                             <div className="flex items-center gap-2">
-                                <i data-lucide="shield-check" className="w-5 h-5 text-red-500"></i>
-                                <h1 className="font-black text-sm uppercase tracking-widest">Painel de Auditoria</h1>
+                                <i data-lucide="bar-chart-3" className="w-5 h-5 text-red-500"></i>
+                                <h1 className="font-black text-xs uppercase tracking-widest">Painel Gestão</h1>
                             </div>
-                            <button onClick={() => setMode('user')} className="text-[10px] font-black bg-red-600 px-4 py-2 rounded-xl uppercase">Sair</button>
+                            <button onClick={() => setMode('user')} className="bg-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase">Sair</button>
                         </header>
                         
                         <div className="p-4 max-w-2xl mx-auto space-y-4">
-                            <div className="bg-white p-2 rounded-2xl shadow-sm flex items-center px-4 gap-3">
+                            <div className="bg-white p-2 rounded-2xl shadow-sm flex items-center px-4 gap-3 border border-slate-200">
                                 <i data-lucide="search" className="w-4 h-4 text-slate-400"></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="Buscar placa ou enfermeiro..." 
-                                    className="w-full py-3 border-none focus:ring-0 outline-none font-medium text-sm bg-transparent"
-                                    value={adminSearch}
-                                    onChange={e => setAdminSearch(e.target.value)}
-                                />
+                                <input type="text" placeholder="Filtrar por Viatura ou Nome..." className="w-full py-3 border-none focus:ring-0 outline-none font-medium text-sm bg-transparent" value={adminSearch} onChange={e => setAdminSearch(e.target.value)} />
                             </div>
 
                             {loading ? (
-                                <div className="text-center py-24 flex flex-col items-center gap-4">
-                                    <i data-lucide="loader-2" className="animate-spin w-10 h-10 text-red-600"></i>
-                                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Sincronizando GMT-3...</p>
+                                <div className="text-center py-24 flex flex-col items-center gap-4 text-slate-400">
+                                    <i data-lucide="loader-2" className="animate-spin w-8 h-8"></i>
+                                    <p className="font-black text-[10px] uppercase">Sincronizando Relatórios...</p>
                                 </div>
-                            ) : filteredAdmin.length === 0 ? (
-                                <div className="text-center py-20 text-slate-400 font-bold uppercase text-xs">Nenhum registro encontrado</div>
                             ) : filteredAdmin.map((reg, i) => (
-                                <div key={i} className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+                                <div key={i} className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden animate-fade-in">
                                     <div className="p-5 bg-slate-50 border-b flex justify-between items-center">
                                         <div>
                                             <h3 className="font-black text-xl text-slate-800">{reg.placa}</h3>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{reg.user}</p>
                                         </div>
                                         <div className="text-right">
-                                            <div className="bg-red-100 text-red-700 text-[10px] font-black px-2 py-1 rounded-lg mb-1 flex items-center gap-1">
-                                                <i data-lucide="clock" className="w-3 h-3"></i> Brasília
-                                            </div>
-                                            <p className="text-[10px] font-bold text-slate-600">{reg.date}</p>
+                                            <div className="bg-blue-50 text-blue-700 text-[9px] font-black px-2 py-1 rounded-lg mb-1 inline-block">GMT-3</div>
+                                            <p className="text-[10px] font-bold text-slate-600 block">{reg.date}</p>
                                         </div>
                                     </div>
-                                    <div className="p-5 space-y-3">
-                                        <div className="flex flex-wrap gap-2">
+                                    <div className="p-5">
+                                        <div className="space-y-2">
                                             {reg.items.some(it => it.status === 'NC') ? (
                                                 reg.items.filter(it => it.status === 'NC').map((it, idx) => (
-                                                    <div key={idx} className="w-full bg-red-50 p-3 rounded-2xl border border-red-100">
-                                                        <div className="flex justify-between items-start">
-                                                            <span className="text-[11px] font-black text-red-800 uppercase">{it.name}</span>
-                                                            <span className="text-[8px] bg-red-200 text-red-900 px-1.5 rounded font-black uppercase">{it.cat}</span>
+                                                    <div key={idx} className="bg-red-50 p-3 rounded-2xl border border-red-100">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-[11px] font-black text-red-800 uppercase leading-none">{it.name}</span>
+                                                            <span className="text-[8px] bg-red-200 text-red-900 px-1.5 py-0.5 rounded font-black uppercase">{it.cat}</span>
                                                         </div>
                                                         {it.obs && <p className="text-[10px] text-red-500 mt-1 italic font-medium">Obs: {it.obs}</p>}
                                                     </div>
                                                 ))
                                             ) : (
-                                                <div className="w-full bg-green-50 p-4 rounded-2xl flex items-center gap-3 text-green-700">
+                                                <div className="bg-green-50 p-4 rounded-2xl flex items-center gap-3 text-green-700">
                                                     <i data-lucide="check-circle" className="w-5 h-5"></i>
-                                                    <span className="text-xs font-black uppercase">Viatura 100% Operacional</span>
+                                                    <span className="text-xs font-black uppercase">Materiais em conformidade</span>
                                                 </div>
                                             )}
                                         </div>
@@ -280,52 +269,47 @@
                 );
             }
 
-            // --- TELA LOGIN ---
+            // --- LOGIN VIEW ---
             if (mode === 'login') {
                 return (
-                    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-900 animate-in">
+                    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-900 animate-fade-in">
+                        <MessageBox />
                         <form onSubmit={handleAdminLogin} className="w-full max-w-sm bg-white p-10 rounded-[3rem] shadow-2xl space-y-8">
                             <div className="text-center">
-                                <div className="bg-red-600 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 rotate-3 shadow-lg shadow-red-500/30">
-                                    <i data-lucide="shield-check" className="text-white w-8 h-8"></i>
+                                <div className="bg-red-600 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+                                    <i data-lucide="lock" className="text-white w-8 h-8"></i>
                                 </div>
-                                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Área Restrita</h2>
-                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Gestão de Auditoria SDENF</p>
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800 leading-tight">Painel de<br/>Gestão</h2>
                             </div>
                             <div className="space-y-4">
-                                <div className="relative">
-                                    <i data-lucide="user" className="absolute left-4 top-4 w-5 h-5 text-slate-300"></i>
-                                    <input type="text" placeholder="USUÁRIO" className="w-full pl-12 p-4 bg-slate-100 rounded-2xl border-none focus:ring-2 focus:ring-red-600 outline-none font-bold" value={loginData.user} onChange={e => setLoginData({...loginData, user: e.target.value})} />
-                                </div>
-                                <div className="relative">
-                                    <i data-lucide="lock" className="absolute left-4 top-4 w-5 h-5 text-slate-300"></i>
-                                    <input type="password" placeholder="SENHA" className="w-full pl-12 p-4 bg-slate-100 rounded-2xl border-none focus:ring-2 focus:ring-red-600 outline-none font-bold" value={loginData.pass} onChange={e => setLoginData({...loginData, pass: e.target.value})} />
-                                </div>
+                                <input type="text" placeholder="USUÁRIO" className="w-full p-4 bg-slate-100 rounded-2xl border-none focus:ring-2 focus:ring-red-600 outline-none font-bold uppercase text-center" value={loginData.user} onChange={e => setLoginData({...loginData, user: e.target.value})} />
+                                <input type="password" placeholder="SENHA" className="w-full p-4 bg-slate-100 rounded-2xl border-none focus:ring-2 focus:ring-red-600 outline-none font-bold text-center" value={loginData.pass} onChange={e => setLoginData({...loginData, pass: e.target.value})} />
                             </div>
-                            <button type="submit" className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-black transition-all uppercase tracking-widest">Acessar Painel</button>
-                            <button type="button" onClick={() => setMode('user')} className="w-full text-slate-400 text-xs font-black uppercase hover:text-slate-600">Cancelar</button>
+                            <button type="submit" className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest text-sm">Entrar</button>
+                            <button type="button" onClick={() => setMode('user')} className="w-full text-slate-400 text-[10px] font-black uppercase">Voltar ao Checklist</button>
                         </form>
                     </div>
                 );
             }
 
-            // --- TELA CHECKLIST USUÁRIO ---
+            // --- USER CHECKLIST VIEW ---
             const currentCategory = CATEGORIES[currentStep].id;
             const items = CHECKLIST_ITEMS.filter(i => i.category === currentCategory);
 
             return (
-                <div className="pb-32 animate-in">
+                <div className="pb-32 animate-fade-in">
+                    <MessageBox />
                     <header className="sticky top-0 z-50 bg-red-600 text-white p-4 shadow-lg flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                            <div className="bg-white p-1.5 rounded-xl shadow-inner">
+                            <div className="bg-white p-1.5 rounded-xl">
                                 <i data-lucide="truck" className="w-5 h-5 text-red-600"></i>
                             </div>
                             <div>
                                 <h1 className="font-black text-lg italic tracking-tighter">SAMU CHECKLIST</h1>
-                                <p className="text-[8px] font-black uppercase opacity-70">Canoas - Rio Grande do Sul</p>
+                                <p className="text-[8px] font-black uppercase opacity-60">Fuso Horário Canoas/RS</p>
                             </div>
                         </div>
-                        <button onClick={() => setMode('login')} className="bg-red-700/50 p-2.5 rounded-2xl border border-red-500/50 transition-all hover:bg-red-500">
+                        <button onClick={() => setMode('login')} className="bg-white/20 p-2.5 rounded-2xl border border-white/20">
                             <i data-lucide="settings" className="w-5 h-5"></i>
                         </button>
                     </header>
@@ -335,7 +319,7 @@
                             <button 
                                 key={cat.id} 
                                 onClick={() => { if (formData.placa || idx === 0) setCurrentStep(idx) }}
-                                className={`flex-1 min-w-[70px] py-4 flex flex-col items-center gap-1 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600 bg-red-50/50' : 'border-transparent text-slate-300'}`}
+                                className={`flex-1 min-w-[75px] py-4 flex flex-col items-center gap-1 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600 bg-red-50/50' : 'border-transparent text-slate-300'}`}
                             >
                                 <i data-lucide={cat.icon} className="w-4 h-4"></i>
                                 <span className="text-[8px] font-black uppercase tracking-tighter">{cat.label}</span>
@@ -345,18 +329,14 @@
 
                     <main className="max-w-md mx-auto p-4 mt-4">
                         {currentCategory === 'info' && (
-                            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-6">
+                            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200 space-y-6">
                                 <div className="space-y-1">
-                                    <h2 className="text-xl font-black text-slate-800 uppercase">Conferência</h2>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Prepare a viatura para o socorro</p>
+                                    <h2 className="text-xl font-black text-slate-800 uppercase leading-none">Conferência</h2>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic mt-1">Dados de Identificação</p>
                                 </div>
                                 <div className="space-y-4">
-                                    <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-black text-xl placeholder:text-slate-300 transition-all" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
-                                    <input type="text" placeholder="NOME DO RESPONSÁVEL" className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold placeholder:text-slate-300 transition-all" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value})} />
-                                </div>
-                                <div className="bg-red-50 p-4 rounded-2xl flex items-center gap-3">
-                                    <i data-lucide="info" className="text-red-500 w-5 h-5 shrink-0"></i>
-                                    <p className="text-[10px] font-bold text-red-700 uppercase">Verifique todos os itens com atenção. A segurança do paciente depende de você.</p>
+                                    <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-black text-xl placeholder:text-slate-200 uppercase" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
+                                    <input type="text" placeholder="ENFERMEIRO / RESPONSÁVEL" className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold placeholder:text-slate-200 uppercase" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value.toUpperCase()})} />
                                 </div>
                             </div>
                         )}
@@ -364,27 +344,21 @@
                         {items.length > 0 && (
                             <div className="space-y-4">
                                 <h2 className="text-xl font-black text-slate-800 ml-2 uppercase flex items-center gap-2">
-                                    <span className="w-2 h-6 bg-red-600 rounded-full inline-block"></span>
+                                    <span className="w-2 h-6 bg-red-600 rounded-full"></span>
                                     {currentCategory}
                                 </h2>
                                 {items.map(item => (
-                                    <div key={item.id} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200 transition-all active:scale-[0.98]">
+                                    <div key={item.id} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200 transition-all">
                                         <div className="flex justify-between items-center mb-5">
                                             <span className="font-bold text-slate-800 tracking-tight text-base pr-4 leading-tight">{item.label}</span>
                                             <div className="flex bg-slate-100 p-1.5 rounded-2xl shrink-0 shadow-inner">
-                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-lg scale-105' : 'text-slate-400'}`}>C</button>
-                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-lg scale-105' : 'text-slate-400'}`}>NC</button>
+                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-lg' : 'text-slate-400'}`}>C</button>
+                                                <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-lg' : 'text-slate-400'}`}>NC</button>
                                             </div>
                                         </div>
                                         <div className="relative">
                                             <i data-lucide="message-square" className="absolute left-3 top-3.5 w-4 h-4 text-slate-300"></i>
-                                            <input 
-                                                type="text" 
-                                                placeholder="Observação (se houver)..." 
-                                                className={`w-full pl-9 p-3.5 text-sm rounded-xl bg-slate-50 border-2 border-transparent focus:border-red-300 outline-none transition-all ${formData.items[item.id].status === 'NC' ? 'border-red-100 bg-red-50/30 text-red-600 placeholder:text-red-300' : ''}`} 
-                                                value={formData.items[item.id].obs} 
-                                                onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} 
-                                            />
+                                            <input type="text" placeholder="Adicionar observação..." className={`w-full pl-9 p-3.5 text-sm rounded-xl bg-slate-50 border-2 border-transparent focus:border-red-300 outline-none transition-all ${formData.items[item.id].status === 'NC' ? 'border-red-100 bg-red-50/50 text-red-600' : ''}`} value={formData.items[item.id].obs} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
                                         </div>
                                     </div>
                                 ))}
@@ -395,37 +369,30 @@
                             <div className="space-y-6">
                                 <div className="bg-white p-8 rounded-[3rem] border-2 border-slate-100 shadow-xl space-y-6">
                                     <div className="flex flex-col items-center">
-                                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 text-red-600 italic font-black text-2xl">?</div>
+                                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 text-red-600 font-black text-2xl">?</div>
                                         <h2 className="text-2xl font-black text-slate-800 uppercase italic">Concluir</h2>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 text-center">Revise as informações da viatura {formData.placa}</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Viatura: {formData.placa}</p>
                                     </div>
-                                    
-                                    <div className="bg-slate-50 p-5 rounded-3xl space-y-2">
-                                        <div className="flex justify-between text-xs font-black uppercase"><span className="text-slate-400">Ambulância:</span> <span className="text-red-600 italic tracking-tighter">{formData.placa}</span></div>
-                                        <div className="flex justify-between text-xs font-black uppercase"><span className="text-slate-400">Responsável:</span> <span>{formData.responsavel}</span></div>
-                                        <div className="flex justify-between text-xs font-black uppercase"><span className="text-slate-400">Horário:</span> <span className="text-slate-400 font-medium">GMT-3 (Brasília)</span></div>
+                                    <div className="bg-slate-50 p-5 rounded-3xl space-y-2 border border-slate-100">
+                                        <div className="flex justify-between text-[10px] font-black uppercase"><span className="text-slate-400 tracking-widest">Responsável</span> <span className="text-slate-900">{formData.responsavel}</span></div>
+                                        <div className="flex justify-between text-[10px] font-black uppercase"><span className="text-slate-400 tracking-widest">Horário Atual</span> <span className="text-red-600">{getBrasilDateTime()}</span></div>
                                     </div>
-
-                                    <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-6 rounded-3xl shadow-2xl flex items-center justify-center gap-3 uppercase tracking-[0.2em] active:scale-95 transition-all text-sm">
+                                    <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-6 rounded-3xl shadow-2xl flex items-center justify-center gap-3 uppercase tracking-widest active:scale-95 transition-all text-sm">
                                         {loading ? <i data-lucide="loader-2" className="animate-spin"></i> : <i data-lucide="send"></i>}
-                                        {loading ? 'Sincronizando...' : 'Gravar Planilha'}
+                                        {loading ? 'GRAVANDO...' : 'ENVIAR AGORA'}
                                     </button>
                                 </div>
                             </div>
                         )}
                     </main>
 
-                    <footer className="fixed bottom-0 left-0 right-0 p-5 bg-white/80 backdrop-blur-xl border-t border-slate-100 flex gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                    <footer className="fixed bottom-0 left-0 right-0 p-5 bg-white/80 backdrop-blur-xl border-t border-slate-100 flex gap-4 shadow-2xl">
                         <div className="max-w-md mx-auto w-full flex gap-3">
                             {currentStep > 0 && (
-                                <button onClick={handlePrev} className="flex-1 bg-white border-2 border-slate-200 text-slate-500 font-black py-5 rounded-3xl uppercase text-[10px] tracking-widest active:bg-slate-50 transition-colors">
-                                    Anterior
-                                </button>
+                                <button onClick={handlePrev} className="flex-1 bg-white border-2 border-slate-200 text-slate-500 font-black py-5 rounded-3xl uppercase text-[10px] tracking-widest active:bg-slate-50">Anterior</button>
                             )}
                             {currentStep < CATEGORIES.length - 1 && (
-                                <button onClick={handleNext} className="flex-[2] bg-red-600 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-200 uppercase text-[10px] tracking-[0.2em] transition-all active:scale-95">
-                                    Próximo
-                                </button>
+                                <button onClick={handleNext} className="flex-[2] bg-red-600 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-200 uppercase text-[10px] tracking-widest active:scale-95 transition-all">Próximo</button>
                             )}
                         </div>
                     </footer>
