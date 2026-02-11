@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checklist SAMU 2026</title>
+    <!-- Tailwind CSS para o design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React e Babel para rodar o código no navegador -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- CONFIGURAÇÃO ---
+        // COLE A URL DO SEU GOOGLE APPS SCRIPT AQUI ENTRE AS ASPAS
+        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwchx-G7pmoAZvsogOXcC2dp7if6aVYoKSHIv-Hcyqbrt4aYnF_zS5VXq6xOU2hiLAQ/exec"; 
+
+        const CATEGORIES = [
+            { id: 'info', label: 'Início', icon: 'user' },
+            { id: 'Insumos', label: 'Insumos', icon: 'package' },
+            { id: 'Imobilização', label: 'Imobilização', icon: 'activity' },
+            { id: 'Equipamentos', label: 'Equipamentos', icon: 'stethoscope' },
+            { id: 'Conforto', label: 'Conforto', icon: 'bed' },
+            { id: 'revisar', label: 'Finalizar', icon: 'check-circle' }
+        ];
+
+        const CHECKLIST_ITEMS = [
+            { id: 'esparadrapo', label: 'Esparadrapo', category: 'Insumos' },
+            { id: 'micropore', label: 'Micropore', category: 'Insumos' },
+            { id: 'perfurocortante', label: 'CX. Perfurocortante', category: 'Insumos' },
+            { id: 'colar_cervical', label: 'Colar cervical (P/M/G)', category: 'Imobilização' },
+            { id: 'talas', label: 'Talas imobilização', category: 'Imobilização' },
+            { id: 'maca_rigida', label: 'Maca rígida', category: 'Imobilização' },
+            { id: 'cinto_aranha', label: 'Cinto aranha', category: 'Imobilização' },
+            { id: 'cadeira_rodas', label: 'Cadeira de rodas', category: 'Imobilização' },
+            { id: 'cilindro_o2', label: 'Cilindro O2', category: 'Equipamentos' },
+            { id: 'fluxometro', label: 'Fluxômetro', category: 'Equipamentos' },
+            { id: 'cateter_nasal', label: 'Cateter nasal', category: 'Equipamentos' },
+            { id: 'extensor_o2', label: 'Extensor O2', category: 'Equipamentos' },
+            { id: 'ambu_adulto', label: 'AMBU adulto', category: 'Equipamentos' },
+            { id: 'oximetro', label: 'Oxímetro', category: 'Equipamentos' },
+            { id: 'estetoscopio', label: 'Estetoscópio', category: 'Equipamentos' },
+            { id: 'esfigmo', label: 'Esfigmomanômetro', category: 'Equipamentos' },
+            { id: 'tesoura', label: 'Tesoura', category: 'Equipamentos' },
+            { id: 'manta_termica', label: 'Manta térmica', category: 'Conforto' },
+            { id: 'lencol', label: 'Lençol', category: 'Conforto' },
+            { id: 'cobertor', label: 'Cobertor', category: 'Conforto' },
+        ];
+
+        function App() {
+            const [currentStep, setCurrentStep] = useState(0);
+            const [loading, setLoading] = useState(false);
+            const [submitted, setSubmitted] = useState(false);
+            const [formData, setFormData] = useState({
+                placa: '',
+                responsavel: '',
+                items: CHECKLIST_ITEMS.reduce((acc, item) => {
+                    acc[item.id] = { status: 'C', obs: '' };
+                    return acc;
+                }, {})
+            });
+
+            // Atualiza ícones após renderizar
+            useEffect(() => { lucide.createIcons(); }, [currentStep, submitted]);
+
+            const handleNext = () => {
+                if (currentStep === 0 && (!formData.placa || !formData.responsavel)) {
+                    alert("Preencha a placa e o responsável.");
+                    return;
+                }
+                setCurrentStep(prev => Math.min(prev + 1, CATEGORIES.length - 1));
+                window.scrollTo(0, 0);
+            };
+
+            const handlePrev = () => {
+                setCurrentStep(prev => Math.max(prev - 1, 0));
+                window.scrollTo(0, 0);
+            };
+
+            const handleStatusChange = (id, status) => {
+                setFormData(prev => ({
+                    ...prev,
+                    items: { ...prev.items, [id]: { ...prev.items[id], status } }
+                }));
+            };
+
+            const handleObsChange = (id, obs) => {
+                setFormData(prev => ({
+                    ...prev,
+                    items: { ...prev.items, [id]: { ...prev.items[id], obs } }
+                }));
+            };
+
+            const handleSubmit = async () => {
+                if (!GOOGLE_SHEET_URL) {
+                    alert("Erro: URL do Google Sheets não configurada.");
+                    return;
+                }
+                setLoading(true);
+                const payload = {
+                    timestamp: new Date().toLocaleString('pt-BR'),
+                    placa: formData.placa,
+                    responsavel: formData.responsavel,
+                    items: Object.entries(formData.items).map(([id, val]) => ({
+                        nome: CHECKLIST_ITEMS.find(i => i.id === id).label,
+                        categoria: CHECKLIST_ITEMS.find(i => i.id === id).category,
+                        status: val.status,
+                        obs: val.obs
+                    }))
+                };
+
+                try {
+                    await fetch(GOOGLE_SHEET_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify(payload)
+                    });
+                    setSubmitted(true);
+                } catch (e) {
+                    alert("Erro ao conectar com a planilha.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            if (submitted) {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-white">
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                            <i data-lucide="check-circle-2" className="text-green-600 w-12 h-12"></i>
+                        </div>
+                        <h1 className="text-2xl font-black mb-2 uppercase">Registrado!</h1>
+                        <p className="text-slate-500 mb-8">O checklist foi enviado para a planilha.</p>
+                        <button onClick={() => window.location.reload()} className="w-full max-w-xs bg-red-600 text-white font-bold py-4 rounded-2xl shadow-lg">Novo Checklist</button>
+                    </div>
+                );
+            }
+
+            const currentCategory = CATEGORIES[currentStep].id;
+            const items = CHECKLIST_ITEMS.filter(i => i.category === currentCategory);
+
+            return (
+                <div className="pb-32">
+                    <header className="sticky top-0 z-50 bg-red-600 text-white p-4 shadow-lg flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <i data-lucide="truck" className="w-6 h-6"></i>
+                            <h1 className="font-black text-lg italic">SAMU CHECKLIST</h1>
+                        </div>
+                        <div className="bg-red-800 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                            {currentStep + 1} / {CATEGORIES.length}
+                        </div>
+                    </header>
+
+                    <nav className="bg-white border-b flex overflow-x-auto no-scrollbar sticky top-[60px] z-40">
+                        {CATEGORIES.map((cat, idx) => (
+                            <div key={cat.id} className={`flex-1 min-w-[70px] py-3 flex flex-col items-center gap-1 border-b-4 ${idx === currentStep ? 'border-red-600 text-red-600 bg-red-50' : 'border-transparent text-slate-300'}`}>
+                                <i data-lucide={cat.icon} className="w-5 h-5"></i>
+                                <span className="text-[8px] font-bold uppercase">{cat.label}</span>
+                            </div>
+                        ))}
+                    </nav>
+
+                    <main className="max-w-md mx-auto p-4 mt-4">
+                        {currentCategory === 'info' && (
+                            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
+                                <h2 className="text-xl font-black text-slate-800 uppercase">Dados Iniciais</h2>
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Viatura / Placa</label>
+                                        <input type="text" placeholder="EX: ABC-1234" className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-black text-lg" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Responsável</label>
+                                        <input type="text" placeholder="Seu nome" className="w-full p-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value})} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {items.length > 0 && (
+                            <div className="space-y-4">
+                                <h2 className="text-xl font-black text-slate-800 uppercase flex items-center gap-2">
+                                    <div className="w-2 h-6 bg-red-600 rounded-full"></div> {currentCategory}
+                                </h2>
+                                {items.map(item => (
+                                    <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="font-bold text-slate-800">{item.label}</span>
+                                            <div className="flex bg-slate-100 p-1 rounded-2xl">
+                                                <button onClick={() => handleStatusChange(item.id, 'C')} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-md' : 'text-slate-400'}`}>C</button>
+                                                <button onClick={() => handleStatusChange(item.id, 'NC')} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-md' : 'text-slate-400'}`}>NC</button>
+                                            </div>
+                                        </div>
+                                        <input type="text" placeholder="Observação..." className="w-full p-3 text-sm rounded-xl bg-slate-50 border-2 border-transparent focus:border-blue-400 outline-none" value={formData.items[item.id].obs} onChange={e => handleObsChange(item.id, e.target.value)} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {currentCategory === 'revisar' && (
+                            <div className="space-y-6">
+                                <div className="bg-white p-6 rounded-3xl border-2 border-slate-100 shadow-sm">
+                                    <h2 className="text-xl font-black text-slate-800 mb-4 uppercase">Revisão</h2>
+                                    <div className="space-y-3">
+                                        <p className="text-sm font-bold flex justify-between uppercase"><span className="text-slate-400">Viatura:</span> {formData.placa}</p>
+                                        <p className="text-sm font-bold flex justify-between uppercase"><span className="text-slate-400">Responsável:</span> {formData.responsavel}</p>
+                                        <div className="pt-4 border-t">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase mb-2 italic">Problemas (NC):</p>
+                                            {Object.entries(formData.items).filter(([_,v]) => v.status === 'NC').length === 0 ? (
+                                                <p className="text-green-600 font-bold text-sm">Nenhum problema detectado.</p>
+                                            ) : (
+                                                <div className="space-y-1">
+                                                    {Object.entries(formData.items).filter(([_,v]) => v.status === 'NC').map(([id]) => (
+                                                        <p key={id} className="text-xs font-black text-red-600">• {CHECKLIST_ITEMS.find(i=>i.id===id).label}</p>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-5 rounded-3xl shadow-2xl flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95 transition-all">
+                                    {loading ? 'Processando...' : 'Gravar no Google Sheets'}
+                                </button>
+                            </div>
+                        )}
+                    </main>
+
+                    <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t flex gap-4">
+                        <div className="max-w-md mx-auto w-full flex gap-3">
+                            {currentStep > 0 && <button onClick={handlePrev} className="flex-1 bg-white border-2 border-slate-200 text-slate-500 font-black py-4 rounded-2xl uppercase text-xs">Anterior</button>}
+                            {currentStep < CATEGORIES.length - 1 && <button onClick={handleNext} className="flex-[2] bg-red-600 text-white font-black py-4 rounded-2xl shadow-lg uppercase text-xs tracking-widest">Próximo</button>}
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
