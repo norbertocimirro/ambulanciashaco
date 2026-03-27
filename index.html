@@ -165,7 +165,7 @@
                             <div className="space-y-10">
                                 <div className="flex items-center gap-4">
                                     <div className="bg-red-600 p-3 rounded-2xl text-white shadow-lg"><i data-lucide="shield-check"></i></div>
-                                    <h2 className="font-black text-xs uppercase text-red-600 leading-tight tracking-widest">Gestão SAE<br/><span className="text-slate-900 text-lg">HACO OPS</span></h2>
+                                    <h2 className="font-black text-xs uppercase text-red-600 leading-tight tracking-widest">Gestão<br/><span className="text-slate-900 text-lg">Ambulâncias</span></h2>
                                 </div>
                                 <nav className="space-y-3">
                                     <button onClick={() => setAdminTab('monitor')} className={`w-full flex items-center gap-3 p-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${adminTab === 'monitor' ? 'bg-red-50 text-red-600 shadow-sm border border-red-100' : 'text-slate-400 hover:bg-slate-100'}`}><i data-lucide="layout-dashboard"></i> Monitor Global</button>
@@ -281,8 +281,8 @@
                         <div className="max-w-md mx-auto w-full space-y-12 text-center">
                             <div className="space-y-4">
                                 <div className="bg-red-600 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl text-white mb-8"><i data-lucide="cross" className="w-12 h-12"></i></div>
-                                <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">HACO <span className="text-red-600">OPS</span></h1>
-                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] italic">Gestão de Equipamentos de Saúde</p>
+                                <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Ambulâncias <span className="text-red-600">HACO</span></h1>
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] italic">Gestão de Materiais e Equipamentos de Saúde</p>
                             </div>
                             <div className="grid grid-cols-2 gap-6">
                                 {AMBULANCE_TYPES.map(t => (
