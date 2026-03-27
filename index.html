@@ -15,6 +15,8 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
         .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -23,7 +25,8 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        const GOOGLE_SHEET_URL = "SUA_URL_AQUI"; // Mantenha sua URL do Apps Script
+        // --- CONFIGURAÇÃO ---
+        const GOOGLE_SHEET_URL = "SUA_URL_DO_APPS_SCRIPT_AQUI"; 
 
         const AMBULANCE_TYPES = [
             { id: 'basica', label: 'Básica', icon: 'truck', color: 'bg-blue-600' },
@@ -39,45 +42,64 @@
             { id: 'revisar', label: 'Finalizar', icon: 'check-circle' }
         ];
 
-        // Base de dados de itens por tipo (Exemplos)
         const MASTER_CHECKLIST = [
             { id: 'esparadrapo', label: 'Esparadrapo', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] },
-            { id: 'desfibrilador', label: 'DEA / Monitor', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
+            { id: 'micropore', label: 'Micropore', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'dea', label: 'DEA / Monitor', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
             { id: 'ventilador', label: 'Ventilador Mecânico', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
             { id: 'oximetro', label: 'Oxímetro de Pulso', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje'] },
-            { id: 'kit_parto', label: 'Kit Parto', cat: 'Insumos', types: ['basica', 'avancada'] },
+            { id: 'talas', label: 'Talas imobilização', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
             { id: 'radio_vhf', label: 'Rádio Tático VHF', cat: 'Equipamentos', types: ['paje', 'missoes'] },
-            { id: 'manta_aluminio', label: 'Manta Técnica', cat: 'Insumos', types: ['paje', 'missoes'] },
+            { id: 'manta_termica', label: 'Manta Térmica', cat: 'Insumos', types: ['paje', 'missoes'] },
         ];
 
         function App() {
-            const [mode, setMode] = useState('selection'); // selection, user, admin, login
+            const [mode, setMode] = useState('selection'); 
             const [selectedType, setSelectedType] = useState(null);
             const [currentStep, setCurrentStep] = useState(0);
             const [loading, setLoading] = useState(false);
             const [submitted, setSubmitted] = useState(false);
             const [formData, setFormData] = useState({ placa: '', responsavel: '', items: {} });
             const [adminData, setAdminData] = useState([]);
+            const [loginData, setLoginData] = useState({ user: '', pass: '' });
 
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [mode, currentStep]);
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [mode, currentStep, submitted]);
 
-            const filteredItems = useMemo(() => {
-                if (!selectedType) return [];
-                return MASTER_CHECKLIST.filter(item => item.types.includes(selectedType.id));
-            }, [selectedType]);
+            // Cálculo de Estatísticas do Dashboard
+            const stats = useMemo(() => {
+                if (adminData.length === 0) return { operacional: 0, alertas: [], total: 0 };
+                const total = adminData.length;
+                const conforme = adminData.filter(d => d[5] === 'C').length;
+                const alertas = adminData.filter(d => d[5] === 'NC').map(d => ({
+                    data: d[0], tipo: d[1], placa: d[2], item: d[4], obs: d[6]
+                })).reverse().slice(0, 5);
+                return { operacional: Math.round((conforme / total) * 100), alertas, total };
+            }, [adminData]);
+
+            const fetchAdminData = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch(`${GOOGLE_SHEET_URL}?action=read`);
+                    const data = await res.json();
+                    setAdminData(data);
+                    setMode('admin');
+                } catch (e) { alert("Erro ao carregar dados."); }
+                setLoading(false);
+            };
 
             const handleTypeSelect = (type) => {
                 setSelectedType(type);
-                // Inicia o estado dos itens para o tipo selecionado
                 const initialItems = {};
                 MASTER_CHECKLIST.filter(i => i.types.includes(type.id)).forEach(i => {
                     initialItems[i.id] = { status: 'C', obs: '' };
                 });
-                setFormData(prev => ({ ...prev, items: initialItems }));
+                setFormData({ placa: '', responsavel: '', items: initialItems });
                 setMode('user');
+                setCurrentStep(0);
             };
 
             const handleSubmit = async () => {
+                if (!formData.placa || !formData.responsavel) return alert("Preencha a identificação.");
                 setLoading(true);
                 const payload = {
                     action: 'write',
@@ -93,123 +115,150 @@
                 try {
                     await fetch(GOOGLE_SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                     setSubmitted(true);
-                } catch (e) { alert("Erro ao salvar dados."); }
+                } catch (e) { alert("Erro de conexão."); }
                 setLoading(false);
             };
 
-            // TELA DE SELEÇÃO INICIAL
-            if (mode === 'selection') {
+            // VIEWS
+            if (submitted) {
                 return (
-                    <div className="min-h-screen p-6 flex flex-col justify-center animate-fade-in bg-slate-100">
-                        <div className="max-w-md mx-auto w-full space-y-8">
-                            <div className="text-center space-y-2">
-                                <div className="bg-red-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-4">
-                                    <i data-lucide="cross" className="text-white w-8 h-8"></i>
-                                </div>
-                                <h1 className="text-3xl font-extrabold tracking-tighter text-slate-800">SISTEMA HACO</h1>
-                                <p className="text-slate-500 font-semibold uppercase text-[10px] tracking-[0.2em]">Selecione o tipo de Viatura</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                {AMBULANCE_TYPES.map(type => (
-                                    <button key={type.id} onClick={() => handleTypeSelect(type)} className="bg-white p-6 rounded-[2.5rem] card-shadow flex flex-col items-center gap-4 active:scale-95 transition-all border-2 border-transparent hover:border-red-500 group">
-                                        <div className={`${type.color} p-4 rounded-2xl text-white shadow-lg`}>
-                                            <i data-lucide={type.icon} className="w-6 h-6"></i>
-                                        </div>
-                                        <span className="font-extrabold text-slate-700 uppercase text-xs tracking-widest">{type.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                            <button onClick={() => setMode('login')} className="w-full py-4 text-slate-400 font-bold text-[10px] uppercase tracking-widest">Acesso Administrativo</button>
+                    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-white animate-fade-in">
+                        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6 shadow-inner text-green-600">
+                            <i data-lucide="check-circle-2" className="w-10 h-10"></i>
                         </div>
+                        <h1 className="text-2xl font-black mb-2 uppercase tracking-tight">Registro Concluído!</h1>
+                        <p className="text-slate-400 mb-8 font-medium">Dados enviados para auditoria do HACO.</p>
+                        <button onClick={() => { setSubmitted(false); setMode('selection'); }} className="w-full max-w-xs bg-slate-900 text-white font-black py-5 rounded-3xl shadow-xl uppercase tracking-widest text-xs transition-all active:scale-95">Nova Verificação</button>
                     </div>
                 );
             }
 
-            // DASHBOARD (DESKTOP REFINADO)
             if (mode === 'admin') {
                 return (
-                    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
-                        {/* Sidebar Desktop */}
-                        <aside className="lg:w-72 bg-slate-900 p-8 text-white flex flex-col justify-between">
+                    <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row animate-fade-in">
+                        <aside className="lg:w-64 bg-slate-900 text-white p-6 flex flex-col justify-between shadow-2xl">
                             <div className="space-y-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-red-600 p-2 rounded-lg"><i data-lucide="activity" className="w-5 h-5"></i></div>
-                                    <h2 className="font-extrabold tracking-tighter text-xl">HACO Ops</h2>
+                                <div className="flex items-center gap-3 border-b border-slate-800 pb-6">
+                                    <div className="bg-red-600 p-2 rounded-lg"><i data-lucide="shield-check" className="w-5 h-5"></i></div>
+                                    <h2 className="font-black text-xs uppercase tracking-tighter italic">Gestão SAE</h2>
                                 </div>
-                                <nav className="space-y-4">
-                                    <button className="flex items-center gap-3 text-red-500 font-bold text-sm"><i data-lucide="layout-dashboard" className="w-4 h-4"></i> Dashboard</button>
-                                    <button className="flex items-center gap-3 text-slate-400 font-bold text-sm hover:text-white transition-colors"><i data-lucide="history" className="w-4 h-4"></i> Histórico</button>
+                                <nav className="space-y-2">
+                                    <button className="w-full flex items-center gap-3 p-3 bg-red-600/10 text-red-500 rounded-xl font-bold text-xs"><i data-lucide="layout-dashboard" className="w-4 h-4"></i> VISÃO GERAL</button>
+                                    <button onClick={fetchAdminData} className="w-full flex items-center gap-3 p-3 text-slate-400 hover:bg-slate-800 rounded-xl font-bold text-xs"><i data-lucide="refresh-cw" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}></i> ATUALIZAR</button>
                                 </nav>
                             </div>
-                            <button onClick={() => setMode('selection')} className="bg-slate-800 p-4 rounded-2xl font-bold text-[10px] uppercase tracking-widest">Sair do Painel</button>
+                            <button onClick={() => setMode('selection')} className="bg-slate-800 p-4 rounded-2xl font-bold text-[10px] uppercase tracking-widest text-slate-400">Voltar ao Início</button>
                         </aside>
 
-                        {/* Main Content */}
-                        <main className="flex-1 p-4 lg:p-12 overflow-y-auto">
-                            <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <main className="flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto">
+                            <header className="flex flex-col md:flex-row justify-between items-center gap-4">
                                 <div>
-                                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-800">Auditoria de Prontidão</h1>
-                                    <p className="text-slate-400 text-sm font-medium">Relatório em tempo real das unidades.</p>
+                                    <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase italic">Auditoria de Prontidão</h1>
+                                    <p className="text-slate-400 text-sm font-medium">Monitoramento em tempo real - Base Canoas.</p>
                                 </div>
-                                <div className="flex gap-4">
-                                    <div className="bg-white px-6 py-4 rounded-3xl shadow-sm border border-slate-200">
-                                        <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Frota</span>
-                                        <span className="text-green-600 font-extrabold text-xl uppercase">94% Operacional</span>
+                                <div className="bg-white px-6 py-4 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4">
+                                    <div className="text-right border-r pr-4">
+                                        <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest">Frota Geral</span>
+                                        <span className={`text-xl font-black ${stats.operacional > 90 ? 'text-green-600' : 'text-amber-500'}`}>{stats.operacional}% OK</span>
                                     </div>
+                                    <i data-lucide="activity" className="text-red-600 w-6 h-6"></i>
                                 </div>
                             </header>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                {/* Exemplo de Card de Auditoria */}
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} className="bg-white rounded-[2.5rem] p-8 card-shadow border border-slate-100 animate-fade-in">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <span className="bg-red-50 text-red-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter">Viatura Avançada</span>
-                                            <span className="text-slate-300 font-bold text-[10px]">Hoje, 08:45</span>
-                                        </div>
-                                        <h3 className="text-2xl font-extrabold text-slate-800 mb-1 leading-none tracking-tighter uppercase">FAB-2304</h3>
-                                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-6">Resp: Ten Cimirro</p>
-                                        
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-3 text-green-600 font-bold text-xs bg-green-50 p-3 rounded-2xl">
-                                                <i data-lucide="check-circle" className="w-4 h-4"></i> Insumos OK
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white p-6 rounded-[2.5rem] card-shadow border border-slate-100">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registros Totais</span>
+                                    <h3 className="text-4xl font-black text-slate-800 mt-2">{stats.total}</h3>
+                                </div>
+                                <div className="md:col-span-2 bg-white p-6 rounded-[2.5rem] card-shadow border border-slate-100">
+                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-tighter mb-4 flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div> Últimos Alertas (NC)
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {stats.alertas.map((a, i) => (
+                                            <div key={i} className="flex justify-between items-center p-3 bg-red-50/50 rounded-2xl border border-red-100">
+                                                <div className="text-[10px] font-bold">
+                                                    <span className="text-red-600 uppercase block">{a.item}</span>
+                                                    <span className="text-slate-400 italic">"{a.obs || 'S/ Obs'}"</span>
+                                                </div>
+                                                <div className="text-right text-[8px] font-black uppercase text-slate-400">
+                                                    {a.placa} • {a.tipo}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-3 text-amber-600 font-bold text-xs bg-amber-50 p-3 rounded-2xl">
-                                                <i data-lucide="alert-triangle" className="w-4 h-4"></i> DEA: Bateria 15% (Atenção)
-                                            </div>
-                                        </div>
+                                        ))}
                                     </div>
-                                ))}
+                                </div>
                             </div>
                         </main>
                     </div>
                 );
             }
 
-            // FORMULÁRIO DE CHECKLIST (MOBILE FIRST)
-            const currentCategory = CATEGORIES[currentStep].id;
-            const itemsToDisplay = filteredItems.filter(i => i.cat === currentCategory);
+            if (mode === 'login') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-900 animate-fade-in">
+                        <div className="w-full max-w-sm bg-white p-10 rounded-[3rem] shadow-2xl space-y-8">
+                            <div className="text-center">
+                                <div className="bg-red-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl text-white">
+                                    <i data-lucide="lock"></i>
+                                </div>
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Painel Gestor</h2>
+                            </div>
+                            <div className="space-y-4">
+                                <input type="text" placeholder="USUÁRIO" className="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-center" value={loginData.user} onChange={e => setLoginData({...loginData, user: e.target.value})} />
+                                <input type="password" placeholder="SENHA" className="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-center" value={loginData.pass} onChange={e => setLoginData({...loginData, pass: e.target.value})} />
+                            </div>
+                            <button onClick={() => { if(loginData.user === 'admin' && loginData.pass === 'sdenf2026') fetchAdminData(); else alert("Acesso negado"); }} className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest text-[10px]">Entrar</button>
+                            <button onClick={() => setMode('selection')} className="w-full text-slate-400 text-[10px] font-black uppercase tracking-widest">Voltar</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (mode === 'selection') {
+                return (
+                    <div className="min-h-screen p-6 flex flex-col justify-center animate-fade-in bg-slate-100">
+                        <div className="max-w-md mx-auto w-full space-y-8 text-center">
+                            <div className="space-y-2">
+                                <div className="bg-red-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-4 text-white">
+                                    <i data-lucide="cross" className="w-8 h-8"></i>
+                                </div>
+                                <h1 className="text-3xl font-black tracking-tighter text-slate-800 italic uppercase">Sistema HACO</h1>
+                                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.2em]">Gestão de Prontidão de Viaturas</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                {AMBULANCE_TYPES.map(type => (
+                                    <button key={type.id} onClick={() => handleTypeSelect(type)} className="bg-white p-6 rounded-[2.5rem] card-shadow flex flex-col items-center gap-4 active:scale-95 transition-all border-2 border-transparent hover:border-red-500 group">
+                                        <div className={`${type.color} p-4 rounded-2xl text-white shadow-lg`}><i data-lucide={type.icon} className="w-6 h-6"></i></div>
+                                        <span className="font-black text-slate-700 uppercase text-[10px] tracking-widest">{type.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={() => setMode('login')} className="w-full py-4 text-slate-400 font-bold text-[9px] uppercase tracking-widest">Acesso Administrativo</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // FLUXO DE CHECKLIST (USER)
+            const itemsToDisplay = MASTER_CHECKLIST.filter(item => item.types.includes(selectedType.id) && item.cat === CATEGORIES[currentStep].id);
 
             return (
                 <div className="min-h-screen pb-32 animate-fade-in bg-white">
-                    <header className={`sticky top-0 z-50 ${selectedType?.color || 'bg-red-600'} text-white p-5 shadow-lg flex justify-between items-center`}>
+                    <header className={`sticky top-0 z-50 ${selectedType.color} text-white p-5 shadow-lg flex justify-between items-center`}>
                         <div className="flex items-center gap-3">
-                            <button onClick={() => setMode('selection')} className="bg-white/20 p-2 rounded-xl">
-                                <i data-lucide="chevron-left" className="w-5 h-5"></i>
-                            </button>
+                            <button onClick={() => setMode('selection')} className="bg-white/20 p-2 rounded-xl"><i data-lucide="chevron-left" className="w-5 h-5"></i></button>
                             <div>
-                                <h1 className="font-extrabold text-lg italic tracking-tighter leading-none">{selectedType?.label}</h1>
-                                <p className="text-[8px] font-black uppercase opacity-70 tracking-widest">HACO - Canoas/RS</p>
+                                <h1 className="font-black text-lg italic tracking-tighter leading-none">{selectedType.label}</h1>
+                                <p className="text-[8px] font-black uppercase opacity-60">Base HACO - Canoas</p>
                             </div>
                         </div>
-                        <div className="bg-black/20 px-3 py-1.5 rounded-xl border border-white/10">
-                            <span className="text-[10px] font-black">{currentStep + 1} / {CATEGORIES.length}</span>
-                        </div>
+                        <div className="bg-black/20 px-3 py-1.5 rounded-xl border border-white/10 text-[10px] font-black">{currentStep + 1} / {CATEGORIES.length}</div>
                     </header>
 
-                    <nav className="bg-white border-b flex overflow-x-auto no-scrollbar sticky top-[72px] z-40">
+                    <nav className="bg-white border-b flex overflow-x-auto no-scrollbar sticky top-[72px] z-40 shadow-sm">
                         {CATEGORIES.map((cat, idx) => (
-                            <button key={cat.id} className={`flex-1 min-w-[80px] py-4 flex flex-col items-center gap-1 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600 bg-red-50/30' : 'border-transparent text-slate-300'}`}>
+                            <button key={cat.id} className={`flex-1 min-w-[85px] py-4 flex flex-col items-center gap-1 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600 bg-red-50/50' : 'border-transparent text-slate-300'}`}>
                                 <i data-lucide={cat.icon} className="w-4 h-4"></i>
                                 <span className="text-[8px] font-black uppercase tracking-tighter">{cat.label}</span>
                             </button>
@@ -217,9 +266,13 @@
                     </nav>
 
                     <main className="max-w-md mx-auto p-5 mt-4 space-y-4">
-                        {currentCategory === 'info' && (
-                            <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-200 space-y-6">
-                                <input type="text" placeholder="PLACA / VIATURA" className="w-full p-5 rounded-2xl bg-white border-2 border-transparent focus:border-red-500 outline-none font-black text-xl text-center uppercase shadow-sm" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
+                        {CATEGORIES[currentStep].id === 'info' && (
+                            <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-200 space-y-6 animate-fade-in">
+                                <div className="space-y-1 text-center mb-6">
+                                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter leading-none italic">Identificação</h2>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Dados do Plantão</p>
+                                </div>
+                                <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-5 rounded-2xl bg-white border-2 border-transparent focus:border-red-500 outline-none font-black text-xl text-center uppercase shadow-sm" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
                                 <input type="text" placeholder="NOME DO RESPONSÁVEL" className="w-full p-5 rounded-2xl bg-white border-2 border-transparent focus:border-red-500 outline-none font-bold text-center uppercase shadow-sm" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value.toUpperCase()})} />
                             </div>
                         )}
@@ -227,27 +280,36 @@
                         {itemsToDisplay.map(item => (
                             <div key={item.id} className="bg-white p-6 rounded-[2.5rem] card-shadow border border-slate-100 animate-fade-in">
                                 <div className="flex justify-between items-center mb-5">
-                                    <span className="font-bold text-slate-800 tracking-tight pr-4">{item.label}</span>
-                                    <div className="flex bg-slate-100 p-1 rounded-2xl shrink-0">
-                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-md' : 'text-slate-400'}`}>C</button>
-                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-md' : 'text-slate-400'}`}>NC</button>
+                                    <span className="font-bold text-slate-800 tracking-tight pr-4 text-sm leading-tight">{item.label}</span>
+                                    <div className="flex bg-slate-100 p-1 rounded-2xl shrink-0 shadow-inner">
+                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-lg' : 'text-slate-400'}`}>C</button>
+                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-lg' : 'text-slate-400'}`}>NC</button>
                                     </div>
                                 </div>
-                                <input type="text" placeholder="Observação..." className="w-full p-3.5 text-xs rounded-xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-red-200" value={formData.items[item.id].obs} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
+                                <input type="text" placeholder="Observação se NC..." className={`w-full p-4 text-xs rounded-xl bg-slate-50 border-none outline-none focus:ring-1 ${formData.items[item.id].status === 'NC' ? 'bg-red-50 ring-red-100' : ''}`} value={formData.items[item.id].obs} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
                             </div>
                         ))}
+
+                        {CATEGORIES[currentStep].id === 'revisar' && (
+                            <div className="bg-slate-900 text-white p-8 rounded-[3rem] space-y-6 text-center shadow-2xl animate-fade-in">
+                                <i data-lucide="send" className="w-12 h-12 mx-auto text-red-500 mb-4"></i>
+                                <h2 className="text-2xl font-black italic uppercase tracking-tighter leading-none">Conferência Pronta</h2>
+                                <div className="bg-white/10 p-5 rounded-3xl space-y-2">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Resumo Prontidão</p>
+                                    <p className="font-bold text-sm tracking-tighter">Viatura: {formData.placa}</p>
+                                    <p className="text-[9px] text-slate-400 uppercase font-black">{Object.values(formData.items).filter(v => v.status === 'NC').length} itens não conformes</p>
+                                </div>
+                                <button onClick={handleSubmit} disabled={loading} className="w-full bg-red-600 text-white font-black py-6 rounded-3xl shadow-xl uppercase tracking-widest text-xs active:scale-95 transition-all">
+                                    {loading ? 'GRAVANDO...' : 'FINALIZAR E GRAVAR'}
+                                </button>
+                            </div>
+                        )}
                     </main>
 
                     <footer className="fixed bottom-0 left-0 right-0 p-5 glass border-t border-slate-100 flex gap-4 shadow-2xl">
                         <div className="max-w-md mx-auto w-full flex gap-3">
-                            <button onClick={() => setCurrentStep(s => Math.max(0, s-1))} className="flex-1 bg-white border border-slate-200 text-slate-500 font-black py-5 rounded-3xl uppercase text-[10px] tracking-widest active:bg-slate-50">Voltar</button>
-                            {currentStep < CATEGORIES.length - 1 ? (
-                                <button onClick={() => setCurrentStep(s => s+1)} className="flex-[2] bg-red-600 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-200 uppercase text-[10px] tracking-widest active:scale-95">Próximo</button>
-                            ) : (
-                                <button onClick={handleSubmit} disabled={loading} className="flex-[2] bg-slate-900 text-white font-black py-5 rounded-3xl shadow-xl uppercase text-[10px] tracking-widest active:scale-95">
-                                    {loading ? 'GRAVANDO...' : 'FINALIZAR'}
-                                </button>
-                            )}
+                            {currentStep > 0 && <button onClick={() => setCurrentStep(s => s - 1)} className="flex-1 bg-white border border-slate-200 text-slate-500 font-black py-5 rounded-3xl uppercase text-[9px] tracking-widest">Anterior</button>}
+                            {currentStep < CATEGORIES.length - 1 && <button onClick={() => setCurrentStep(s => s + 1)} className="flex-[2] bg-slate-900 text-white font-black py-5 rounded-3xl shadow-xl uppercase text-[9px] tracking-widest active:scale-95 transition-all">Próximo</button>}
                         </div>
                     </footer>
                 </div>
