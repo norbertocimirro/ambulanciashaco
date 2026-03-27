@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - Comando de Prontidão</title>
+    <title>HACO - Comando de Auditoria SAE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -11,11 +11,11 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0f172a; color: #f8fafc; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
     </style>
 </head>
 <body>
@@ -24,13 +24,13 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec"; // SUBSTITUA PELA SUA URL /EXEC
+        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec"; 
 
         const AMBULANCE_TYPES = [
             { id: 'basica', label: 'Básica', icon: 'truck', color: 'bg-blue-600' },
             { id: 'avancada', label: 'Avançada', icon: 'zap', color: 'bg-red-600' },
             { id: 'paje', label: 'PAJÉ', icon: 'shield', color: 'bg-green-700' },
-            { id: 'missoes', label: 'Missões', icon: 'plane', color: 'bg-slate-900' }
+            { id: 'missoes', label: 'Missões', icon: 'plane', color: 'bg-slate-700' }
         ];
 
         const CATEGORIES = [
@@ -42,11 +42,11 @@
 
         const MASTER_CHECKLIST = [
             { id: 'esparadrapo', label: 'Esparadrapo', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'micropore', label: 'Micropore', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] },
             { id: 'dea', label: 'DEA / Monitor', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
-            { id: 'ventilador', label: 'Ventilador Mecânico', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
             { id: 'oximetro', label: 'Oxímetro de Pulso', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
             { id: 'talas', label: 'Talas imobilização', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
-            { id: 'radio_vhf', label: 'Rádio Tático VHF', cat: 'Equipamentos', types: ['paje', 'missoes'] }
+            { id: 'fluxometro', label: 'Fluxômetro O2', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] }
         ];
 
         function App() {
@@ -58,15 +58,13 @@
             const [formData, setFormData] = useState({ placa: '', responsavel: '', items: {} });
             const [adminData, setAdminData] = useState([]);
             const [loginData, setLoginData] = useState({ user: '', pass: '' });
-            const lastNCCount = useRef(0);
 
-            // Hook para carregar ícones e processar áudio
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
             }, [mode, currentStep, submitted, adminData]);
 
-            // CÁLCULOS TÁTICOS (Dashboard)
-            const dashboard = useMemo(() => {
+            // --- LÓGICA DE AUDITORIA AVANÇADA ---
+            const audit = useMemo(() => {
                 if (!adminData.length) return { operacional: 0, alerts: [], shifts: {}, currentShift: '---' };
 
                 const now = new Date();
@@ -77,54 +75,63 @@
                 if (hour >= 7 && hour < 13) shiftName = 'Manhã';
                 else if (hour >= 13 && hour < 19) shiftName = 'Tarde';
 
-                const conforme = adminData.filter(d => d[5] === 'C').length;
                 const total = adminData.length;
+                const conforme = adminData.filter(d => d[5] === 'C').length;
+                
+                // Alertas Detalhados: Item, Obs, Placa e Quem registrou
                 const ncItems = adminData.filter(d => d[5] === 'NC').map(d => ({
-                    data: d[0], tipo: d[1], placa: d[2], item: d[4], obs: d[6]
+                    data: d[0], tipo: d[1], placa: d[2], resp: d[3], item: d[4], obs: d[6]
                 })).reverse();
 
-                // Alerta Sonoro
-                if (ncItems.length > lastNCCount.current && mode === 'admin') {
-                    const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                    audio.play().catch(() => {});
-                    lastNCCount.current = ncItems.length;
-                }
-
-                // Cobertura por Turno
+                // Mapeamento de Cobertura e Responsáveis
                 const shifts = {};
                 AMBULANCE_TYPES.forEach(t => {
                     const logsToday = adminData.filter(d => d[1] === t.label && d[0].includes(today));
-                    const hours = logsToday.map(d => parseInt(d[0].split(' ')[1].split(':')[0]));
+                    
+                    const getShiftData = (start, end) => {
+                        const log = logsToday.find(d => {
+                            const timePart = d[0].split(', ')[1];
+                            const h = parseInt(timePart.split(':')[0]);
+                            return h >= start && h < end;
+                        });
+                        return log ? { ok: true, resp: log[3] } : { ok: false, resp: null };
+                    };
+
+                    // Lógica especial para Noite (atravessa meia-noite)
+                    const nightLog = logsToday.find(d => {
+                        const timePart = d[0].split(', ')[1];
+                        const h = parseInt(timePart.split(':')[0]);
+                        return h >= 19 || h < 7;
+                    });
+
                     shifts[t.label] = {
-                        Manhã: hours.some(h => h >= 7 && h < 13),
-                        Tarde: hours.some(h => h >= 13 && h < 19),
-                        Noite: hours.some(h => h >= 19 || h < 7)
+                        Manhã: getShiftData(7, 13),
+                        Tarde: getShiftData(13, 19),
+                        Noite: nightLog ? { ok: true, resp: nightLog[3] } : { ok: false, resp: null }
                     };
                 });
 
                 return {
                     operacional: Math.round((conforme / total) * 100),
-                    alerts: ncItems.slice(0, 10),
+                    alerts: ncItems.slice(0, 8),
                     shifts,
                     currentShift: shiftName
                 };
-            }, [adminData, mode]);
+            }, [adminData]);
 
-            // AÇÕES
+            // --- AÇÕES ---
             const fetchAdminData = async () => {
                 setLoading(true);
                 try {
-                    // Cache-buster (?t=) força a planilha a enviar dados novos
                     const res = await fetch(`${GOOGLE_SHEET_URL}?action=read&t=${Date.now()}`);
                     const data = await res.json();
                     setAdminData(data);
-                    lastNCCount.current = data.filter(d => d[5] === 'NC').length;
                     setMode('admin');
-                } catch (e) { alert("Erro ao sincronizar com o HACO."); }
+                } catch (e) { alert("Erro de sincronização."); }
                 setLoading(false);
             };
 
-            const resetApp = () => {
+            const handleReset = () => {
                 setSubmitted(false);
                 setSelectedType(null);
                 setCurrentStep(0);
@@ -143,7 +150,6 @@
             };
 
             const handleSubmit = async () => {
-                if (!formData.placa || !formData.responsavel) return alert("Preencha os campos obrigatórios.");
                 setLoading(true);
                 const payload = {
                     action: 'write',
@@ -152,7 +158,6 @@
                     responsavel: formData.responsavel,
                     items: Object.entries(formData.items).map(([id, val]) => ({
                         nome: MASTER_CHECKLIST.find(i => i.id === id).label,
-                        categoria: MASTER_CHECKLIST.find(i => i.id === id).cat,
                         status: val.status,
                         obs: val.obs
                     }))
@@ -160,60 +165,57 @@
                 try {
                     await fetch(GOOGLE_SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                     setSubmitted(true);
-                } catch (e) { alert("Erro ao gravar dados."); }
+                } catch (e) { alert("Erro ao gravar."); }
                 setLoading(false);
             };
 
-            // VIEWS
-            if (submitted) {
-                return (
-                    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 text-green-600 shadow-inner">
-                            <i data-lucide="check-circle" className="w-10 h-10"></i>
-                        </div>
-                        <h1 className="text-3xl font-black mb-2 italic uppercase tracking-tighter">Enviado!</h1>
-                        <p className="text-slate-400 mb-8 font-bold text-xs uppercase tracking-widest">Prontidão registrada na UPI.</p>
-                        <button onClick={resetApp} className="w-full max-w-xs bg-slate-900 text-white font-black py-5 rounded-3xl shadow-xl uppercase tracking-widest text-[10px]">Nova Verificação</button>
-                    </div>
-                );
-            }
-
+            // --- TELA ADMINISTRATIVA (AVANÇADA) ---
             if (mode === 'admin') {
                 return (
-                    <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row animate-fade-in">
-                        <aside className="lg:w-64 bg-slate-900 text-white p-6 space-y-8 shadow-2xl">
-                            <div className="flex items-center gap-3 border-b border-slate-800 pb-6 text-red-500">
-                                <i data-lucide="shield-check"></i>
-                                <h2 className="font-black text-xs uppercase italic tracking-tighter">Gestão SAE</h2>
+                    <div className="min-h-screen bg-slate-950 flex flex-col lg:flex-row animate-fade-in">
+                        <aside className="lg:w-64 bg-slate-900/50 p-6 flex flex-col justify-between border-r border-white/5">
+                            <div className="space-y-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-red-600 p-2 rounded-xl shadow-lg shadow-red-900/20"><i data-lucide="shield-check"></i></div>
+                                    <h2 className="font-black text-xs uppercase italic tracking-tighter text-red-500 leading-none">Gestão SAE<br/><span className="text-white text-[14px]">HACO OPS</span></h2>
+                                </div>
+                                <nav className="space-y-2">
+                                    <button className="w-full flex items-center gap-4 p-4 bg-red-600/10 text-red-500 rounded-2xl font-bold text-xs border border-red-500/20"><i data-lucide="layout-dashboard" className="w-4 h-4"></i> DASHBOARD</button>
+                                    <button onClick={fetchAdminData} className="w-full flex items-center gap-4 p-4 text-slate-400 hover:text-white transition-all font-bold text-xs"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i> ATUALIZAR</button>
+                                </nav>
                             </div>
-                            <nav className="space-y-1">
-                                <button className="w-full flex items-center gap-3 p-4 bg-white/5 text-white rounded-2xl font-bold text-xs"><i data-lucide="layout-dashboard"></i> DASHBOARD</button>
-                                <button onClick={fetchAdminData} className="w-full flex items-center gap-3 p-4 text-slate-500 hover:text-white rounded-2xl font-bold text-xs transition-all"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i> ATUALIZAR</button>
-                            </nav>
-                            <button onClick={resetApp} className="w-full p-4 bg-slate-800 rounded-2xl text-[10px] font-black uppercase text-slate-500">Sair</button>
+                            <button onClick={handleReset} className="p-4 bg-white/5 rounded-2xl text-[10px] font-black uppercase text-slate-500 hover:text-white transition-all">Sair do Comando</button>
                         </aside>
 
-                        <main className="flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto">
-                            <header className="flex flex-col md:flex-row justify-between items-end border-b pb-6 gap-4">
+                        <main className="flex-1 p-4 lg:p-10 space-y-8 overflow-y-auto">
+                            <header className="flex justify-between items-end border-b border-white/5 pb-8">
                                 <div>
-                                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Status de Prontidão</h1>
-                                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">Turno: <span className="text-red-600 underline">{dashboard.currentShift}</span></p>
+                                    <h1 className="text-5xl font-black tracking-tighter uppercase italic leading-none">Monitor de Prontidão</h1>
+                                    <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.4em] mt-4 italic">Turno Vigente: <span className="text-red-600">{audit.currentShift}</span></p>
                                 </div>
-                                <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 text-center min-w-[120px]">
-                                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Operacionalidade</span>
-                                    <span className={`text-2xl font-black leading-none ${dashboard.operacional > 90 ? 'text-green-600' : 'text-red-600'}`}>{dashboard.operacional}%</span>
+                                <div className="bg-slate-900 p-6 rounded-[2.5rem] border border-white/5 text-center min-w-[160px]">
+                                    <span className="block text-[9px] font-black text-slate-500 uppercase mb-2 tracking-widest">Operacionalidade</span>
+                                    <span className={`text-4xl font-black ${audit.operacional > 80 ? 'text-green-500' : 'text-red-500'}`}>{audit.operacional}%</span>
                                 </div>
                             </header>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* GRID DE VIATURAS COM RESPONSÁVEIS */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {AMBULANCE_TYPES.map(t => (
-                                    <div key={t.id} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                                        <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest italic border-b pb-2">{t.label}</h4>
-                                        <div className="space-y-3">
+                                    <div key={t.id} className="glass-card p-6 rounded-[2.5rem] shadow-2xl">
+                                        <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-white/5 pb-2">{t.label}</h4>
+                                        <div className="space-y-5">
                                             {['Manhã', 'Tarde', 'Noite'].map(s => (
-                                                <div key={s} className="flex justify-between items-center text-[9px] font-bold uppercase">
-                                                    <span className="text-slate-400">{s}</span>
-                                                    <span className={dashboard.shifts[t.label][s] ? 'text-green-600' : 'text-red-400 animate-pulse'}>{dashboard.shifts[t.label][s] ? 'OK' : 'PENDENTE'}</span>
+                                                <div key={s} className="space-y-1">
+                                                    <div className="flex justify-between items-center text-[10px] font-black uppercase">
+                                                        <span className="text-slate-400 italic">{s}</span>
+                                                        <span className={audit.shifts[t.label][s].ok ? 'text-green-500' : 'text-red-500 animate-pulse'}>
+                                                            {audit.shifts[t.label][s].ok ? 'CONCLUÍDO' : 'PENDENTE'}
+                                                        </span>
+                                                    </div>
+                                                    {audit.shifts[t.label][s].ok && (
+                                                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter italic">Responsável: {audit.shifts[t.label][s].resp}</p>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -221,20 +223,25 @@
                                 ))}
                             </div>
 
-                            <div className="bg-slate-900 text-white rounded-[3rem] p-8 shadow-2xl">
-                                <h3 className="text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 text-red-500 italic"><i data-lucide="zap"></i> Falhas Críticas (NC)</h3>
-                                <div className="space-y-3">
-                                    {dashboard.alerts.map((a, i) => (
-                                        <div key={i} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/10">
-                                            <div>
-                                                <p className="text-xs font-black uppercase italic tracking-tighter">{a.item}</p>
-                                                <p className="text-[10px] font-bold text-red-400 uppercase">{a.obs || "Material Faltante"}</p>
+                            {/* FALHAS CRÍTICAS REAIS */}
+                            <div className="bg-red-950/20 rounded-[3.5rem] p-10 border border-red-500/10 shadow-2xl">
+                                <h3 className="text-xs font-black uppercase tracking-[0.3em] mb-8 flex items-center gap-3 text-red-500 italic"><i data-lucide="zap" className="animate-bounce"></i> Falhas Críticas (NC) Detalhadas</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {audit.alerts.length > 0 ? audit.alerts.map((a, i) => (
+                                        <div key={i} className="flex justify-between items-center p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:bg-white/10 transition-all group">
+                                            <div className="flex items-center gap-5">
+                                                <div className="bg-red-600/20 text-red-500 p-3 rounded-2xl group-hover:bg-red-600 group-hover:text-white transition-all"><i data-lucide="alert-triangle"></i></div>
+                                                <div>
+                                                    <p className="text-sm font-black uppercase italic leading-none">{a.item}</p>
+                                                    <p className="text-[10px] font-bold text-red-400 uppercase mt-2">{a.obs || "Material Faltante"}</p>
+                                                </div>
                                             </div>
-                                            <div className="text-right text-[9px] font-black uppercase text-slate-500">
-                                                {a.placa} • {a.data.split(' ')[1]}
+                                            <div className="text-right">
+                                                <span className="block text-[11px] font-black uppercase text-white leading-none">{a.resp}</span>
+                                                <span className="text-[9px] font-bold text-slate-600 uppercase mt-1 italic leading-none">{a.placa}</span>
                                             </div>
                                         </div>
-                                    ))}
+                                    )) : <div className="col-span-2 text-center py-10 opacity-10 font-black text-xl italic uppercase tracking-[0.5em]">Tudo em Conformidade</div>}
                                 </div>
                             </div>
                         </main>
@@ -242,107 +249,129 @@
                 );
             }
 
+            // --- TELAS DE SELEÇÃO E LOGIN ---
             if (mode === 'login') {
                 return (
-                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-900 animate-fade-in">
-                        <div className="w-full max-w-sm bg-white p-12 rounded-[4rem] shadow-2xl space-y-8 text-center">
-                            <div className="bg-red-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-xl"><i data-lucide="lock"></i></div>
-                            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800 italic">Acesso Gestor</h2>
-                            <div className="space-y-4">
-                                <input type="text" placeholder="USUÁRIO" className="w-full p-5 bg-slate-100 rounded-3xl outline-none font-black text-center text-sm" value={loginData.user} onChange={e => setLoginData({...loginData, user: e.target.value})} />
-                                <input type="password" placeholder="SENHA" className="w-full p-5 bg-slate-100 rounded-3xl outline-none font-black text-center text-sm" value={loginData.pass} onChange={e => setLoginData({...loginData, pass: e.target.value})} />
+                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 animate-fade-in">
+                        <div className="w-full max-w-sm bg-slate-900 p-12 rounded-[4rem] shadow-2xl space-y-10 border border-white/5">
+                            <div className="text-center">
+                                <div className="bg-red-600 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl text-white shadow-red-900/20"><i data-lucide="lock" className="w-8 h-8"></i></div>
+                                <h2 className="text-3xl font-black uppercase tracking-tighter text-white italic">Acesso Gestor</h2>
                             </div>
-                            <button onClick={() => loginData.pass === 'sdenf2026' ? fetchAdminData() : alert("Erro")} className="w-full bg-slate-900 text-white font-black py-6 rounded-3xl shadow-xl uppercase text-[11px] tracking-widest">Entrar</button>
-                            <button onClick={resetApp} className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Voltar</button>
+                            <div className="space-y-4">
+                                <input type="text" placeholder="USUÁRIO" className="w-full p-6 bg-white/5 rounded-[2rem] outline-none font-black text-center text-white border-2 border-transparent focus:border-red-600 transition-all uppercase text-sm shadow-inner" value={loginData.user} onChange={e => setLoginData({...loginData, user: e.target.value})} />
+                                <input type="password" placeholder="SENHA" className="w-full p-6 bg-white/5 rounded-[2rem] outline-none font-black text-center text-white border-2 border-transparent focus:border-red-600 transition-all text-sm shadow-inner" value={loginData.pass} onChange={e => setLoginData({...loginData, pass: e.target.value})} />
+                            </div>
+                            <button onClick={() => loginData.pass === 'sdenf2026' ? fetchAdminData() : alert("Negado")} className="w-full bg-red-600 text-white font-black py-7 rounded-[2rem] shadow-2xl uppercase tracking-widest text-[11px] active:scale-95 transition-all">Autenticar Comando</button>
+                            <button onClick={handleReset} className="w-full text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-colors italic">Voltar ao Início</button>
                         </div>
+                    </div>
+                );
+            }
+
+            if (submitted) {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-950 animate-fade-in">
+                        <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mb-8 text-green-500 shadow-inner border border-green-500/30">
+                            <i data-lucide="check-circle" className="w-12 h-12"></i>
+                        </div>
+                        <h1 className="text-3xl font-black mb-2 uppercase italic tracking-tighter">Concluído!</h1>
+                        <p className="text-slate-500 mb-10 font-bold text-[10px] uppercase tracking-widest leading-loose">Dados enviados para a Auditoria HACO.</p>
+                        <button onClick={handleReset} className="w-full max-w-xs bg-white text-slate-900 font-black py-6 rounded-[2.5rem] shadow-2xl uppercase tracking-[0.2em] text-[11px] active:scale-95 transition-all">Nova Verificação</button>
                     </div>
                 );
             }
 
             if (mode === 'selection') {
                 return (
-                    <div className="min-h-screen p-6 flex flex-col justify-center animate-fade-in bg-slate-100">
-                        <div className="max-w-md mx-auto w-full space-y-10 text-center">
-                            <div className="space-y-2">
-                                <div className="bg-red-600 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-xl text-white mb-4"><i data-lucide="cross" className="w-10 h-10"></i></div>
-                                <h1 className="text-4xl font-black tracking-tighter text-slate-800 italic uppercase">Sistema HACO</h1>
-                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em]">Gestão de Prontidão</p>
+                    <div className="min-h-screen p-6 flex flex-col justify-center animate-fade-in">
+                        <div className="max-w-md mx-auto w-full space-y-12 text-center">
+                            <div className="space-y-4">
+                                <div className="bg-red-600 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl mb-6 text-white shadow-red-900/10 animate-pulse"><i data-lucide="cross" className="w-12 h-12"></i></div>
+                                <h1 className="text-5xl font-black tracking-tighter text-white italic uppercase leading-none">Sistema HACO</h1>
+                                <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.4em] italic">Comando de Prontidão Tática</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-6">
                                 {AMBULANCE_TYPES.map(t => (
-                                    <button key={t.id} onClick={() => handleTypeSelect(t)} className="bg-white p-7 rounded-[3rem] shadow-lg flex flex-col items-center gap-4 active:scale-95 transition-all border-4 border-transparent hover:border-red-600">
-                                        <div className={`${t.color} p-4 rounded-2xl text-white`}><i data-lucide={t.icon}></i></div>
-                                        <span className="font-black text-slate-800 uppercase text-[10px] tracking-widest">{t.label}</span>
+                                    <button key={t.id} onClick={() => handleTypeSelect(t)} className="bg-slate-900 p-8 rounded-[3.5rem] shadow-2xl flex flex-col items-center gap-6 active:scale-95 transition-all border-4 border-transparent hover:border-red-600 group">
+                                        <div className={`${t.color} p-6 rounded-3xl text-white shadow-xl group-hover:scale-110 transition-transform`}><i data-lucide={t.icon} className="w-8 h-8"></i></div>
+                                        <span className="font-black text-slate-400 group-hover:text-white uppercase text-[10px] tracking-widest transition-colors">{t.label}</span>
                                     </button>
                                 ))}
                             </div>
-                            <button onClick={() => setMode('login')} className="text-slate-400 font-bold text-[10px] uppercase tracking-widest italic">Painel de Gestão</button>
+                            <button onClick={() => setMode('login')} className="w-full py-6 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-colors italic">Painel Administrativo Gestor</button>
                         </div>
                     </div>
                 );
             }
 
-            // FORMULÁRIO
+            // --- VIEW: FORMULÁRIO USER ---
             const items = MASTER_CHECKLIST.filter(i => i.types.includes(selectedType?.id) && i.cat === CATEGORIES[currentStep].id);
 
             return (
                 <div className="min-h-screen pb-40 animate-fade-in">
-                    <header className={`sticky top-0 z-50 ${selectedType?.color} text-white p-6 shadow-xl flex justify-between items-center rounded-b-[3rem]`}>
-                        <div className="flex items-center gap-4">
-                            <button onClick={resetApp} className="bg-white/20 p-2 rounded-xl"><i data-lucide="chevron-left"></i></button>
+                    <header className={`sticky top-0 z-50 ${selectedType?.color || 'bg-red-600'} text-white p-7 shadow-2xl flex justify-between items-center rounded-b-[3rem]`}>
+                        <div className="flex items-center gap-5">
+                            <button onClick={handleReset} className="bg-white/20 p-3 rounded-2xl"><i data-lucide="chevron-left" className="w-6 h-6"></i></button>
                             <div>
-                                <h1 className="font-black text-xl italic tracking-tighter leading-none uppercase">{selectedType?.label}</h1>
-                                <p className="text-[9px] font-black uppercase opacity-70">HACO Canoas/RS</p>
+                                <h1 className="font-black text-2xl italic tracking-tighter leading-none uppercase">{selectedType?.label}</h1>
+                                <p className="text-[10px] font-black uppercase opacity-60 tracking-widest mt-1">Checklist Operacional</p>
                             </div>
                         </div>
-                        <div className="bg-black/20 px-4 py-2 rounded-2xl text-xs font-black">{currentStep + 1} / {CATEGORIES.length}</div>
+                        <div className="bg-black/20 px-5 py-2.5 rounded-2xl border border-white/10 text-xs font-black italic">{currentStep + 1} / {CATEGORIES.length}</div>
                     </header>
 
-                    <nav className="flex overflow-x-auto no-scrollbar sticky top-[84px] z-40 px-4 py-3 bg-white/80 backdrop-blur-md">
+                    <nav className="flex overflow-x-auto no-scrollbar sticky top-[100px] z-40 px-5 py-4 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
                         {CATEGORIES.map((cat, idx) => (
-                            <button key={cat.id} className={`flex-1 min-w-[90px] py-4 flex flex-col items-center gap-1 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600' : 'border-transparent text-slate-300'}`}>
+                            <button key={cat.id} className={`flex-1 min-w-[100px] py-4 flex flex-col items-center gap-1 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600' : 'border-transparent text-slate-500'}`}>
                                 <i data-lucide={cat.icon} className="w-4 h-4"></i>
-                                <span className="text-[9px] font-black uppercase">{cat.label}</span>
+                                <span className="text-[9px] font-black uppercase tracking-tighter">{cat.label}</span>
                             </button>
                         ))}
                     </nav>
 
-                    <main className="max-w-md mx-auto p-6 space-y-6">
+                    <main className="max-w-md mx-auto p-6 space-y-6 pt-10">
                         {CATEGORIES[currentStep].id === 'info' && (
-                            <div className="bg-slate-50 p-10 rounded-[3.5rem] space-y-8 shadow-inner border border-slate-200">
-                                <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-6 rounded-[2rem] bg-white border-none outline-none font-black text-2xl text-center uppercase shadow-sm" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
-                                <input type="text" placeholder="RESPONSÁVEL" className="w-full p-6 rounded-[2rem] bg-white border-none outline-none font-bold text-center uppercase shadow-sm text-sm" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value.toUpperCase()})} />
+                            <div className="bg-slate-900 p-12 rounded-[4rem] border border-white/5 space-y-10 shadow-2xl">
+                                <div className="text-center">
+                                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Identificação</h2>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-2 italic">Procedimento Operacional Padrão</p>
+                                </div>
+                                <div className="space-y-6">
+                                    <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-7 rounded-[2.5rem] bg-white/5 border-2 border-transparent focus:border-red-500 outline-none font-black text-3xl text-center uppercase shadow-inner text-white transition-all" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
+                                    <input type="text" placeholder="NOME DO RESPONSÁVEL" className="w-full p-7 rounded-[2.5rem] bg-white/5 border-2 border-transparent focus:border-red-500 outline-none font-bold text-center uppercase shadow-inner text-white text-sm transition-all" value={formData.responsavel} onChange={e => setFormData({...formData, responsavel: e.target.value.toUpperCase()})} />
+                                </div>
                             </div>
                         )}
 
                         {items.map(item => (
-                            <div key={item.id} className="bg-white p-7 rounded-[3rem] shadow-sm border border-slate-100 animate-fade-in">
-                                <div className="flex justify-between items-center mb-6">
-                                    <span className="font-black text-slate-800 text-sm uppercase italic leading-tight">{item.label}</span>
-                                    <div className="flex bg-slate-100 p-1 rounded-2xl shadow-inner">
-                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-6 py-3 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-500 text-white shadow-lg' : 'text-slate-400'}`}>C</button>
-                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-6 py-3 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-lg' : 'text-slate-400'}`}>NC</button>
+                            <div key={item.id} className="bg-slate-900 p-8 rounded-[3.5rem] shadow-2xl border border-white/5 animate-fade-in group">
+                                <div className="flex justify-between items-center mb-8">
+                                    <span className="font-black text-white tracking-tighter text-lg uppercase italic leading-tight">{item.label}</span>
+                                    <div className="flex bg-black/40 p-1.5 rounded-2xl shrink-0 shadow-inner border border-white/5">
+                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-7 py-4 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-green-600 text-white shadow-xl scale-110' : 'text-slate-600'}`}>C</button>
+                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-7 py-4 rounded-xl text-xs font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-600 text-white shadow-xl scale-110' : 'text-slate-600'}`}>NC</button>
                                     </div>
                                 </div>
-                                <input type="text" placeholder="Observação..." className="w-full p-4 text-xs rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-red-100 transition-all" value={formData.items[item.id].obs} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
+                                <input type="text" placeholder="Adicionar observação técnica..." className={`w-full p-5 text-xs rounded-3xl bg-black/20 border-none outline-none focus:ring-4 focus:ring-red-600/10 transition-all text-slate-300 ${formData.items[item.id].status === 'NC' ? 'bg-red-950/20 text-red-500 italic' : ''}`} value={formData.items[item.id].obs} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
                             </div>
                         ))}
 
                         {CATEGORIES[currentStep].id === 'revisar' && (
-                            <div className="bg-slate-950 text-white p-10 rounded-[4rem] text-center shadow-2xl space-y-8">
-                                <i data-lucide="send" className="w-12 h-12 mx-auto text-red-500"></i>
-                                <h2 className="text-3xl font-black italic uppercase leading-none">Confirmar<br/>Registro</h2>
-                                <button onClick={handleSubmit} disabled={loading} className="w-full bg-red-600 text-white font-black py-7 rounded-[2.5rem] shadow-xl uppercase tracking-widest text-xs active:scale-95 transition-all">
-                                    {loading ? 'GRAVANDO...' : 'FINALIZAR'}
+                            <div className="bg-red-600 text-white p-12 rounded-[4.5rem] text-center shadow-[0_30px_60px_-15px_rgba(220,38,38,0.3)] space-y-10">
+                                <i data-lucide="send" className="w-12 h-12 mx-auto"></i>
+                                <h2 className="text-4xl font-black italic uppercase leading-none tracking-tighter">Confirmar<br/>Envio de Dados</h2>
+                                <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-950 text-white font-black py-8 rounded-[2.5rem] shadow-2xl uppercase tracking-[0.3em] text-[11px] active:scale-95 transition-all">
+                                    {loading ? 'PROCESSANDO...' : 'FINALIZAR AUDITORIA'}
                                 </button>
                             </div>
                         )}
                     </main>
 
-                    <footer className="fixed bottom-0 left-0 right-0 p-8 glass border-t border-slate-100 flex gap-4 shadow-2xl rounded-t-[4rem]">
-                        <div className="max-w-md mx-auto w-full flex gap-4">
-                            {currentStep > 0 && <button onClick={() => setCurrentStep(s => s - 1)} className="flex-1 bg-white border-2 border-slate-200 text-slate-500 font-black py-5 rounded-[2rem] uppercase text-[10px] tracking-widest italic">Anterior</button>}
-                            {currentStep < CATEGORIES.length - 1 && <button onClick={() => setCurrentStep(s => s + 1)} className="flex-[2] bg-slate-900 text-white font-black py-5 rounded-[2rem] shadow-xl uppercase text-[10px] tracking-widest italic">Próximo</button>}
+                    <footer className="fixed bottom-0 left-0 right-0 p-8 bg-slate-950/90 backdrop-blur-xl border-t border-white/5 flex gap-5 z-50 rounded-t-[4rem] shadow-2xl">
+                        <div className="max-w-md mx-auto w-full flex gap-5">
+                            {currentStep > 0 && <button onClick={() => setCurrentStep(s => s - 1)} className="flex-1 bg-white/5 border-2 border-white/10 text-slate-400 font-black py-6 rounded-[2.5rem] uppercase text-[10px] tracking-widest italic active:bg-white/10">Anterior</button>}
+                            {currentStep < CATEGORIES.length - 1 && <button onClick={() => setCurrentStep(s => s + 1)} className="flex-[2] bg-slate-900 text-white font-black py-6 rounded-[2.5rem] shadow-2xl uppercase text-[10px] tracking-widest italic active:scale-95 border border-white/10">Próximo Passo</button>}
                         </div>
                     </footer>
                 </div>
