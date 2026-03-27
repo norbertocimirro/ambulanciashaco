@@ -11,11 +11,12 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f0f4f8; color: #1e293b; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .card-inner-shadow { box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05); }
+        .colorful-card { transition: all 0.3s ease; border: 1px solid rgba(255, 255, 255, 0.8); }
+        .colorful-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
@@ -24,25 +25,25 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
+        // ⚠️ ATENÇÃO: COLOQUE SUA URL /EXEC AQUI
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec"; 
 
         const AMBULANCE_TYPES = [
-            { id: 'basica', label: 'Básica', color: 'bg-blue-500', border: 'border-blue-200', text: 'text-blue-600', light: 'bg-blue-50' },
-            { id: 'avancada', label: 'Avançada', color: 'bg-red-500', border: 'border-red-200', text: 'text-red-600', light: 'bg-red-50' },
-            { id: 'paje', label: 'PAJÉ', color: 'bg-emerald-500', border: 'border-emerald-200', text: 'text-emerald-600', light: 'bg-emerald-50' },
-            { id: 'missoes', label: 'Missões', color: 'bg-orange-500', border: 'border-orange-200', text: 'text-orange-600', light: 'bg-orange-50' }
+            { id: 'basica', label: 'Básica', color: 'bg-blue-500', text: 'text-blue-600', light: 'bg-blue-50', border: 'border-blue-100' },
+            { id: 'avancada', label: 'Avançada', color: 'bg-rose-500', text: 'text-rose-600', light: 'bg-rose-50', border: 'border-rose-100' },
+            { id: 'paje', label: 'PAJÉ', color: 'bg-emerald-500', text: 'text-emerald-600', light: 'bg-emerald-50', border: 'border-emerald-100' },
+            { id: 'missoes', label: 'Missões', color: 'bg-amber-500', text: 'text-amber-600', light: 'bg-amber-50', border: 'border-amber-100' }
         ];
 
         const CATEGORIES = [
-            { id: 'info', label: 'Identificação', icon: 'user' },
-            { id: 'Insumos', label: 'Insumos Médicos', icon: 'package' },
+            { id: 'info', label: 'Identificação', icon: 'shield' },
+            { id: 'Insumos', label: 'Materiais Médicos', icon: 'package' },
             { id: 'Equipamentos', label: 'Equipamentos APH', icon: 'stethoscope' },
             { id: 'revisar', label: 'Finalizar', icon: 'check-circle' }
         ];
 
         const MASTER_CHECKLIST = [
             { id: 'esparadrapo', label: 'Esparadrapo', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] },
-            { id: 'micropore', label: 'Micropore', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] },
             { id: 'dea', label: 'DEA / Monitor Cardíaco', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
             { id: 'oximetro', label: 'Oxímetro de Pulso', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
             { id: 'talas', label: 'Talas imobilização', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
@@ -57,35 +58,27 @@
             const [submitted, setSubmitted] = useState(false);
             const [formData, setFormData] = useState({ placa: '', posto: '', nomeGuerra: '', items: {} });
             const [adminData, setAdminData] = useState([]);
-            const lastNCSize = useRef(0);
+            const [loginData, setLoginData] = useState({ pass: '' });
 
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [mode, currentStep, submitted, adminData]);
 
-            // --- LÓGICA DE AUDITORIA ---
+            // --- LÓGICA DE AUDITORIA SAE ---
             const audit = useMemo(() => {
-                if (!adminData.length) return { operacional: 0, alerts: [], shifts: {}, currentShift: '---' };
+                if (!adminData.length) return { operacional: 0, alerts: [], shifts: {} };
                 const today = new Date().toLocaleDateString('pt-BR');
-                const hour = new Date().getHours();
-                
-                let shiftName = 'NOITE';
-                if (hour >= 7 && hour < 13) shiftName = 'MANHÃ';
-                else if (hour >= 13 && hour < 19) shiftName = 'TARDE';
-
+                const conforme = adminData.filter(d => d[5] === 'C').length;
                 const ncItems = adminData.filter(d => d[5] === 'NC').map(d => ({
                     data: d[0], tipo: d[1], placa: d[2], resp: d[3], item: d[4], obs: d[6]
                 })).reverse();
-
-                if (ncItems.length > lastNCSize.current && mode === 'admin') {
-                    new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
-                    lastNCSize.current = ncItems.length;
-                }
 
                 const shifts = {};
                 AMBULANCE_TYPES.forEach(t => {
                     const logsToday = adminData.filter(d => d[1] === t.label && d[0].includes(today));
                     const getShiftData = (start, end) => {
                         const log = logsToday.find(d => {
-                            const h = parseInt(d[0].match(/(\d{2}):/)[1]);
+                            const match = d[0].match(/(\d{2}):/);
+                            if (!match) return false;
+                            const h = parseInt(match[1]);
                             return h >= start && h < end;
                         });
                         return log ? { ok: true, resp: log[3] } : { ok: false };
@@ -98,18 +91,18 @@
                         }) ? { ok: true, resp: logsToday.find(d => { const h = parseInt(d[0].match(/(\d{2}):/)[1]); return h >= 19 || h < 7; })[3] } : { ok: false }
                     };
                 });
-
-                return { operacional: Math.round((adminData.filter(d => d[5] === 'C').length / adminData.length) * 100), alerts: ncItems.slice(0, 6), shifts, currentShift: shiftName };
-            }, [adminData, mode]);
+                return { operacional: Math.round((conforme / adminData.length) * 100), alerts: ncItems.slice(0, 6), shifts };
+            }, [adminData]);
 
             const fetchData = async () => {
+                if (GOOGLE_SHEET_URL.includes("SUA_URL")) return alert("Erro: Configure a URL do script no código!");
                 setLoading(true);
                 try {
                     const res = await fetch(`${GOOGLE_SHEET_URL}?action=read&t=${Date.now()}`);
                     const data = await res.json();
                     setAdminData(data);
                     setMode('admin');
-                } catch (e) { alert("Erro de sincronização."); }
+                } catch (e) { alert("Erro ao carregar dados. Verifique a URL do Google Script."); }
                 setLoading(false);
             };
 
@@ -122,13 +115,12 @@
             const handleTypeSelect = (type) => {
                 setSelectedType(type);
                 const items = {};
-                MASTER_CHECKLIST.filter(i => i.types.includes(type.id)).forEach(i => { items[i.id] = { status: 'C', obs: '' }; });
+                MASTER_CHECKLIST.filter(i => i.types.includes(type.id)).forEach(i => { items[id] = { status: 'C', obs: '' }; });
                 setFormData({ ...formData, items });
                 setMode('user');
             };
 
             const handleSubmit = async () => {
-                if (!formData.placa || !formData.posto || !formData.nomeGuerra) return alert("Preencha os dados de identificação.");
                 setLoading(true);
                 const payload = {
                     action: 'write', tipo: selectedType.label, placa: formData.placa,
@@ -142,51 +134,53 @@
                 setLoading(false);
             };
 
-            // --- DASHBOARD GESTÃO (LIGHT) ---
+            // --- VIEW: DASHBOARD COLORIDO (LIGHT) ---
             if (mode === 'admin') {
                 return (
-                    <div className="min-h-screen flex flex-col lg:flex-row animate-fade-in">
-                        <aside className="lg:w-64 bg-white border-r border-slate-200 p-6 space-y-8 shadow-sm">
-                            <div className="flex items-center gap-3 border-b pb-6">
-                                <div className="bg-red-500 p-2 rounded-xl text-white shadow-lg"><i data-lucide="activity"></i></div>
-                                <div>
-                                    <h2 className="font-black text-[10px] uppercase text-red-500 leading-none">Gestão de Saúde</h2>
-                                    <p className="font-bold text-xs uppercase tracking-widest text-slate-800">HACO Ops</p>
+                    <div className="min-h-screen flex flex-col lg:flex-row animate-fade-in bg-white">
+                        <aside className="lg:w-72 bg-slate-50 p-8 border-r border-slate-100 flex flex-col justify-between">
+                            <div className="space-y-10">
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-red-500 p-3 rounded-2xl text-white shadow-lg shadow-red-200"><i data-lucide="shield-check"></i></div>
+                                    <div>
+                                        <h2 className="font-black text-[10px] uppercase text-red-500 tracking-widest leading-none">Gestão SAE</h2>
+                                        <p className="font-extrabold text-lg text-slate-800 tracking-tighter">HACO Ops</p>
+                                    </div>
                                 </div>
+                                <nav className="space-y-2">
+                                    <button className="w-full flex items-center gap-3 p-4 bg-white text-red-600 rounded-2xl font-black text-xs uppercase shadow-sm border border-red-100"><i data-lucide="layout-dashboard"></i> Monitor Global</button>
+                                    <button onClick={fetchData} className="w-full flex items-center gap-3 p-4 text-slate-400 hover:bg-white rounded-2xl font-black text-xs uppercase transition-all"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i> Sincronizar</button>
+                                </nav>
                             </div>
-                            <nav className="space-y-1">
-                                <button className="w-full flex items-center gap-3 p-4 bg-red-50 text-red-600 rounded-2xl font-black text-[10px] uppercase tracking-widest"><i data-lucide="layout-dashboard" className="w-4 h-4"></i> Monitor</button>
-                                <button onClick={fetchData} className="w-full flex items-center gap-3 p-4 text-slate-400 hover:bg-slate-50 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i> Sincronizar</button>
-                            </nav>
-                            <button onClick={resetApp} className="w-full p-4 text-slate-300 font-black text-[10px] uppercase tracking-widest hover:text-red-500 transition-colors">Voltar</button>
+                            <button onClick={resetApp} className="p-4 text-slate-300 font-black text-[10px] uppercase hover:text-red-500">Voltar ao Início</button>
                         </aside>
 
-                        <main className="flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto">
-                            <header className="flex justify-between items-end border-b pb-6">
+                        <main className="flex-1 p-6 lg:p-12 space-y-10 overflow-y-auto">
+                            <header className="flex justify-between items-center bg-gradient-to-r from-slate-50 to-transparent p-8 rounded-[3rem]">
                                 <div>
-                                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Gestão de Equipamentos</h1>
-                                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-3 italic">Controle de Prontidão SAE - Turno: <span className="text-red-600">{audit.currentShift}</span></p>
+                                    <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Prontidão de<br/><span className="text-red-500">Equipamentos</span></h1>
+                                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.4em] mt-4">Auditoria em Tempo Real - Canoas/RS</p>
                                 </div>
-                                <div className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 text-center min-w-[140px]">
-                                    <span className="text-3xl font-black text-emerald-500">{audit.operacional}%</span>
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">Conformidade Global</p>
+                                <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-50 text-center ring-8 ring-slate-50">
+                                    <span className="text-5xl font-black text-emerald-500 italic">{audit.operacional}%</span>
+                                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-2 italic">Status Frota</p>
                                 </div>
                             </header>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {AMBULANCE_TYPES.map(t => (
-                                    <div key={t.id} className={`bg-white p-6 rounded-[2.5rem] shadow-sm border-t-4 ${t.border}`}>
-                                        <h4 className={`text-[10px] font-black ${t.text} uppercase tracking-widest mb-6 border-b pb-2`}>{t.label}</h4>
-                                        <div className="space-y-4">
+                                    <div key={t.id} className={`bg-white p-8 rounded-[3rem] shadow-sm border-t-[12px] ${t.border} colorful-card`}>
+                                        <h4 className={`text-[11px] font-black ${t.text} uppercase tracking-widest mb-8 border-b pb-4`}>{t.label}</h4>
+                                        <div className="space-y-6">
                                             {['MANHÃ', 'TARDE', 'NOITE'].map(s => (
-                                                <div key={s} className="flex justify-between items-center">
-                                                    <div>
-                                                        <span className="text-[9px] font-black text-slate-400 block">{s}</span>
-                                                        {audit.shifts[t.label][s].ok && <span className="text-[10px] font-extrabold text-slate-700 uppercase italic leading-none">{audit.shifts[t.label][s].resp}</span>}
+                                                <div key={s} className="space-y-1">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[9px] font-black text-slate-300 uppercase italic">{s}</span>
+                                                        <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${audit.shifts[t.label][s].ok ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-50 text-rose-500 animate-pulse'}`}>
+                                                            {audit.shifts[t.label][s].ok ? '✓ OK' : 'PENDENTE'}
+                                                        </span>
                                                     </div>
-                                                    <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase ${audit.shifts[t.label][s].ok ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500 animate-pulse'}`}>
-                                                        {audit.shifts[t.label][s].ok ? 'CONCLUÍDO' : 'PENDENTE'}
-                                                    </span>
+                                                    {audit.shifts[t.label][s].ok && <p className="text-[10px] font-extrabold text-slate-600 uppercase italic">{audit.shifts[t.label][s].resp}</p>}
                                                 </div>
                                             ))}
                                         </div>
@@ -194,21 +188,22 @@
                                 ))}
                             </div>
 
-                            <div className="bg-white rounded-[3rem] p-8 shadow-sm border border-slate-100">
-                                <h3 className="text-[10px] font-black uppercase text-red-500 tracking-[0.3em] mb-8 flex items-center gap-2 italic"><i data-lucide="alert-circle" className="w-4 h-4"></i> Alertas de Equipamentos Críticos (NC)</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-white rounded-[4rem] p-10 shadow-sm border border-slate-100 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl"></div>
+                                <h3 className="text-[11px] font-black uppercase text-red-500 tracking-[0.4em] mb-10 flex items-center gap-3 italic"><i data-lucide="alert-octagon" className="w-5 h-5"></i> Alertas Críticos de Equipamentos</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {audit.alerts.map((a, i) => (
-                                        <div key={i} className="flex justify-between items-center p-5 bg-slate-50 rounded-3xl border border-slate-100 group hover:border-red-500 transition-all">
-                                            <div className="flex items-center gap-4">
-                                                <div className="bg-red-500 text-white p-3 rounded-2xl shadow-lg"><i data-lucide="stethoscope" className="w-4 h-4"></i></div>
+                                        <div key={i} className="flex justify-between items-center p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100 hover:border-red-500 transition-all group">
+                                            <div className="flex items-center gap-5">
+                                                <div className="bg-red-500 text-white p-4 rounded-3xl shadow-lg shadow-red-200"><i data-lucide="stethoscope" className="w-5 h-5"></i></div>
                                                 <div>
-                                                    <p className="text-xs font-black uppercase italic text-slate-800">{a.item}</p>
-                                                    <p className="text-[10px] font-bold text-red-500 mt-1">{a.obs || "Material Faltante / Danificado"}</p>
+                                                    <p className="text-sm font-black uppercase italic leading-none text-slate-800">{a.item}</p>
+                                                    <p className="text-[10px] font-bold text-red-500 uppercase mt-2">{a.obs || "Faltante / Inoperante"}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <span className="block text-[10px] font-black text-slate-900 uppercase leading-none italic">{a.resp}</span>
-                                                <span className="text-[8px] font-bold text-slate-400 uppercase mt-1 leading-none">{a.placa}</span>
+                                                <span className="block text-[11px] font-black text-slate-900 uppercase italic leading-none">{a.resp}</span>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase mt-2 leading-none">{a.placa}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -219,126 +214,115 @@
                 );
             }
 
-            // --- FLUXO DE SELEÇÃO E CHECKLIST ---
-            if (submitted) {
+            // --- VIEW: LOGIN ---
+            if (mode === 'login') {
                 return (
-                    <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-white animate-fade-in">
-                        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6 text-emerald-600 shadow-inner"><i data-lucide="check-circle" className="w-10 h-10"></i></div>
-                        <h1 className="text-3xl font-black mb-2 uppercase italic tracking-tighter">Dados Enviados!</h1>
-                        <p className="text-slate-400 mb-10 font-bold text-[10px] uppercase tracking-widest">Auditoria de Equipamentos Concluída.</p>
-                        <button onClick={resetApp} className="w-full max-w-xs bg-slate-900 text-white font-black py-6 rounded-3xl shadow-xl uppercase tracking-widest text-[10px] active:scale-95 transition-all">Nova Verificação</button>
+                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 animate-fade-in">
+                        <div className="w-full max-w-sm bg-white p-12 rounded-[4rem] shadow-2xl text-center border border-white">
+                            <div className="bg-red-500 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-8 text-white shadow-xl shadow-red-200"><i data-lucide="lock" className="w-8 h-8"></i></div>
+                            <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900 italic leading-none">Acesso<br/>Gestor</h2>
+                            <div className="space-y-4 my-10">
+                                <input type="password" placeholder="SENHA DE ACESSO" className="w-full p-6 bg-slate-50 rounded-[2rem] outline-none font-black text-center text-sm border-2 border-transparent focus:border-red-500 transition-all uppercase" value={loginData.pass} onChange={e => setLoginData({...loginData, pass: e.target.value})} />
+                            </div>
+                            <button onClick={() => loginData.pass === 'sdenf2026' ? fetchData() : alert("Acesso negado.")} className="w-full bg-slate-900 text-white font-black py-7 rounded-[2.5rem] shadow-xl uppercase tracking-widest text-[11px] active:scale-95 transition-all italic">Entrar no Comando</button>
+                            <button onClick={resetApp} className="mt-8 text-slate-400 font-bold text-[10px] uppercase tracking-widest italic">Voltar</button>
+                        </div>
                     </div>
                 );
             }
 
+            // --- VIEW: SELEÇÃO ---
             if (mode === 'selection') {
                 return (
-                    <div className="min-h-screen p-8 flex flex-col justify-center animate-fade-in bg-slate-50">
-                        <div className="max-w-md mx-auto w-full space-y-12 text-center">
+                    <div className="min-h-screen flex flex-col justify-center items-center p-8 bg-slate-50">
+                        <div className="text-center max-w-md w-full space-y-12">
                             <div className="space-y-4">
-                                <div className="bg-red-600 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl text-white mb-6"><i data-lucide="cross" className="w-10 h-10"></i></div>
-                                <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">HACO <span className="text-red-600 font-black">OPS</span></h1>
-                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] italic leading-none">Gestão de Equipamentos de Saúde</p>
+                                <div className="bg-red-500 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl text-white mb-8"><i data-lucide="cross" className="w-12 h-12"></i></div>
+                                <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">HACO <span className="text-red-500">OPS</span></h1>
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] italic">Gestão de Equipamentos de Saúde</p>
                             </div>
                             <div className="grid grid-cols-2 gap-6">
                                 {AMBULANCE_TYPES.map(t => (
-                                    <button key={t.id} onClick={() => handleTypeSelect(t)} className="bg-white p-8 rounded-[3.5rem] shadow-sm border border-slate-100 flex flex-col items-center gap-5 active:scale-95 transition-all hover:border-red-500 group">
-                                        <div className={`${t.color} p-5 rounded-2xl text-white shadow-xl group-hover:scale-110 transition-transform`}><i data-lucide="truck"></i></div>
-                                        <span className="font-black text-slate-800 uppercase text-[10px] tracking-widest">{t.label}</span>
+                                    <button key={t.id} onClick={() => { setSelectedType(t); setMode('user'); }} className="bg-white p-8 rounded-[3.5rem] shadow-sm flex flex-col items-center gap-6 active:scale-95 transition-all border-4 border-transparent hover:border-red-500 group">
+                                        <div className={`${t.color} p-6 rounded-3xl text-white shadow-xl shadow-slate-200 group-hover:scale-110 transition-transform`}><i data-lucide="truck"></i></div>
+                                        <span className="font-black text-slate-800 uppercase text-[11px] tracking-widest">{t.label}</span>
                                     </button>
                                 ))}
                             </div>
-                            <button onClick={() => setMode('login')} className="w-full py-6 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-red-600 transition-colors italic border-t pt-10">Painel de Gestão e Auditoria</button>
+                            <button onClick={() => setMode('login')} className="w-full py-8 text-slate-400 font-black text-[11px] uppercase tracking-widest hover:text-red-500 transition-colors italic border-t border-slate-200 pt-10">Painel de Auditoria Gestor</button>
                         </div>
                     </div>
                 );
             }
 
-            if (mode === 'login') {
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-100 animate-fade-in">
-                        <div className="w-full max-w-sm bg-white p-12 rounded-[4rem] shadow-2xl space-y-8 text-center border border-slate-100">
-                            <div className="bg-red-600 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 text-white shadow-xl shadow-red-200"><i data-lucide="lock"></i></div>
-                            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800 italic leading-none">Autenticação<br/>Gestor</h2>
-                            <div className="space-y-4">
-                                <input type="password" placeholder="SENHA DE ACESSO" className="w-full p-6 bg-slate-50 rounded-[2rem] outline-none font-black text-center text-sm border-2 border-transparent focus:border-red-500 transition-all" value={loginData.pass} onChange={e => setLoginData({...loginData, pass: e.target.value})} />
-                            </div>
-                            <button onClick={() => loginData.pass === 'sdenf2026' ? fetchData() : alert("Acesso negado.")} className="w-full bg-slate-900 text-white font-black py-6 rounded-[2.5rem] shadow-xl uppercase tracking-widest text-[11px] active:scale-95 transition-all italic">Entrar no Comando</button>
-                            <button onClick={resetApp} className="text-slate-400 font-bold text-[10px] uppercase tracking-widest italic">Voltar</button>
-                        </div>
-                    </div>
-                );
-            }
-
-            const items = MASTER_CHECKLIST.filter(i => i.types.includes(selectedType?.id) && i.cat === CATEGORIES[currentStep].id);
-
+            // --- VIEW: CHECKLIST ---
             return (
-                <div className="min-h-screen pb-40 animate-fade-in">
-                    <header className={`sticky top-0 z-50 ${selectedType.color} text-white p-7 shadow-xl flex justify-between items-center rounded-b-[3rem]`}>
-                        <div className="flex items-center gap-4">
-                            <button onClick={resetApp} className="bg-white/20 p-2.5 rounded-2xl"><i data-lucide="chevron-left"></i></button>
+                <div className="min-h-screen pb-44 animate-fade-in bg-white">
+                    <header className={`sticky top-0 z-50 ${selectedType?.color || 'bg-red-600'} text-white p-8 shadow-2xl flex justify-between items-center rounded-b-[4rem]`}>
+                        <div className="flex items-center gap-6">
+                            <button onClick={resetApp} className="bg-white/20 p-3 rounded-2xl border border-white/10"><i data-lucide="chevron-left"></i></button>
                             <div>
-                                <h1 className="font-black text-2xl italic tracking-tighter leading-none uppercase">{selectedType.label}</h1>
-                                <p className="text-[10px] font-black uppercase opacity-70 tracking-widest italic mt-1">HACO - Canoas/RS</p>
+                                <h1 className="font-black text-2xl italic tracking-tighter leading-none uppercase">{selectedType?.label}</h1>
+                                <p className="text-[10px] font-black uppercase opacity-70 tracking-widest italic mt-1">Hospital de Aeronáutica</p>
                             </div>
                         </div>
-                        <div className="bg-black/20 px-4 py-2 rounded-2xl border border-white/10 text-xs font-black italic">{currentStep + 1} / {CATEGORIES.length}</div>
+                        <div className="bg-black/20 px-5 py-2.5 rounded-2xl border border-white/10 text-xs font-black italic">{currentStep + 1} / {CATEGORIES.length}</div>
                     </header>
 
-                    <nav className="flex overflow-x-auto no-scrollbar sticky top-[100px] z-40 px-6 py-4 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+                    <nav className="flex overflow-x-auto no-scrollbar sticky top-[110px] z-40 px-6 py-5 bg-white border-b border-slate-50">
                         {CATEGORIES.map((cat, idx) => (
-                            <button key={cat.id} className={`flex-1 min-w-[100px] py-3 flex flex-col items-center gap-1 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600 bg-red-50/50 rounded-t-3xl' : 'border-transparent text-slate-300'}`}>
+                            <button key={cat.id} className={`flex-1 min-w-[110px] py-4 flex flex-col items-center gap-1 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600' : 'border-transparent text-slate-300'}`}>
                                 <i data-lucide={cat.icon} className="w-4 h-4"></i>
-                                <span className="text-[9px] font-black uppercase tracking-tighter">{cat.label}</span>
+                                <span className="text-[10px] font-black uppercase tracking-tighter">{cat.label}</span>
                             </button>
                         ))}
                     </nav>
 
-                    <main className="max-w-md mx-auto p-6 pt-10 space-y-6">
+                    <main className="max-w-md mx-auto p-6 pt-12 space-y-8">
                         {CATEGORIES[currentStep].id === 'info' && (
-                            <div className="bg-white p-10 rounded-[4rem] shadow-sm border border-slate-100 space-y-8 animate-fade-in card-inner-shadow">
+                            <div className="bg-slate-50 p-12 rounded-[4rem] space-y-10 shadow-inner border border-slate-100">
                                 <div className="text-center">
-                                    <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter italic">Identificação Militar</h2>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 italic leading-none">Procedimento SAE Obrigatório</p>
+                                    <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">Identificação</h2>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 italic">Procedimento Militar SAE</p>
                                 </div>
-                                <div className="space-y-4">
-                                    <input type="text" placeholder="VIATURA / PLACA" className="w-full p-6 rounded-[2.5rem] bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-black text-3xl text-center uppercase shadow-sm transition-all" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <input type="text" placeholder="POSTO (Ex: 1T)" className="w-full p-5 rounded-[2rem] bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold text-center uppercase text-sm shadow-sm" value={formData.posto} onChange={e => setFormData({...formData, posto: e.target.value.toUpperCase()})} />
-                                        <input type="text" placeholder="NOME DE GUERRA" className="w-full p-5 rounded-[2rem] bg-slate-50 border-2 border-transparent focus:border-red-500 outline-none font-bold text-center uppercase text-sm shadow-sm" value={formData.nomeGuerra} onChange={e => setFormData({...formData, nomeGuerra: e.target.value.toUpperCase()})} />
+                                <div className="space-y-6">
+                                    <input type="text" placeholder="VIATURA / PLACA" className="w-full p-8 rounded-[2.5rem] bg-white border-2 border-transparent focus:border-red-500 outline-none font-black text-4xl text-center uppercase shadow-sm transition-all" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input type="text" placeholder="POSTO (Ex: 1T)" className="w-full p-6 rounded-[2rem] bg-white border-2 border-transparent focus:border-red-500 outline-none font-bold text-center uppercase text-sm shadow-sm" value={formData.posto} onChange={e => setFormData({...formData, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="NOME DE GUERRA" className="w-full p-6 rounded-[2rem] bg-white border-2 border-transparent focus:border-red-500 outline-none font-bold text-center uppercase text-sm shadow-sm" value={formData.nomeGuerra} onChange={e => setFormData({...formData, nomeGuerra: e.target.value.toUpperCase()})} />
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {items.map(item => (
-                            <div key={item.id} className="bg-white p-8 rounded-[3.5rem] shadow-sm border border-slate-100 animate-fade-in group">
-                                <div className="flex justify-between items-center mb-6">
+                        {MASTER_CHECKLIST.filter(i => i.types.includes(selectedType?.id) && i.cat === CATEGORIES[currentStep].id).map(item => (
+                            <div key={item.id} className="bg-white p-8 rounded-[3.5rem] shadow-sm border border-slate-100 animate-fade-in">
+                                <div className="flex justify-between items-center mb-8">
                                     <span className="font-black text-slate-800 text-lg uppercase italic leading-tight pr-4">{item.label}</span>
-                                    <div className="flex bg-slate-100 p-1.5 rounded-2xl shrink-0 shadow-inner">
-                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'C'}}})} className={`px-6 py-3 rounded-xl text-[11px] font-black transition-all ${formData.items[item.id].status === 'C' ? 'bg-emerald-500 text-white shadow-xl scale-110' : 'text-slate-400'}`}>C</button>
-                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], status: 'NC'}}})} className={`px-6 py-3 rounded-xl text-[11px] font-black transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-500 text-white shadow-xl scale-110' : 'text-slate-400'}`}>NC</button>
+                                    <div className="flex bg-slate-50 p-2 rounded-2xl shadow-inner border border-slate-100">
+                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {status: 'C', obs: ''}}})} className={`px-8 py-4 rounded-xl text-xs font-black transition-all ${formData.items[item.id]?.status === 'C' ? 'bg-emerald-500 text-white shadow-xl scale-110' : 'text-slate-300'}`}>C</button>
+                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {status: 'NC', obs: ''}}})} className={`px-8 py-4 rounded-xl text-xs font-black transition-all ${formData.items[item.id]?.status === 'NC' ? 'bg-red-500 text-white shadow-xl scale-110' : 'text-slate-300'}`}>NC</button>
                                     </div>
                                 </div>
-                                <input type="text" placeholder="Adicionar observação técnica..." className={`w-full p-5 text-xs rounded-[1.5rem] bg-slate-50 outline-none focus:ring-4 focus:ring-red-500/5 transition-all ${formData.items[item.id].status === 'NC' ? 'bg-red-50 text-red-500 font-bold italic' : 'text-slate-600'}`} value={formData.items[item.id].obs} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
+                                <input type="text" placeholder="Observação técnica..." className={`w-full p-6 text-xs rounded-3xl bg-slate-50 border-none outline-none focus:ring-4 focus:ring-red-100 transition-all ${formData.items[item.id]?.status === 'NC' ? 'bg-red-50 text-red-500 font-bold italic' : ''}`} value={formData.items[item.id]?.obs || ''} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
                             </div>
                         ))}
 
                         {CATEGORIES[currentStep].id === 'revisar' && (
-                            <div className="bg-red-500 text-white p-12 rounded-[4.5rem] text-center shadow-2xl shadow-red-200 space-y-10 animate-fade-in border-t-8 border-red-600">
-                                <div className="bg-white/10 w-24 h-24 rounded-full flex items-center justify-center mx-auto border border-white/20"><i data-lucide="send" className="w-10 h-10"></i></div>
-                                <h2 className="text-4xl font-black italic uppercase leading-none tracking-tighter">Concluir<br/>Auditoria</h2>
-                                <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-8 rounded-[2.5rem] shadow-2xl uppercase tracking-[0.3em] text-[11px] active:scale-95 transition-all italic">
-                                    {loading ? 'SINCRONIZANDO...' : 'EXECUTAR GRAVAÇÃO'}
+                            <div className="bg-red-500 text-white p-12 rounded-[5rem] text-center shadow-2xl shadow-red-200 space-y-10 animate-fade-in">
+                                <div className="bg-white/20 w-24 h-24 rounded-full flex items-center justify-center mx-auto"><i data-lucide="send" className="w-12 h-12"></i></div>
+                                <h2 className="text-4xl font-black italic uppercase leading-none tracking-tighter">Finalizar<br/>Auditoria</h2>
+                                <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-900 text-white font-black py-9 rounded-[3rem] shadow-2xl uppercase tracking-[0.3em] text-[12px] active:scale-95 transition-all italic">
+                                    {loading ? 'SINCRONIZANDO...' : 'EXECUTAR TRANSMISSÃO'}
                                 </button>
                             </div>
                         )}
                     </main>
 
-                    <footer className="fixed bottom-0 left-0 right-0 p-8 bg-white/80 backdrop-blur-2xl border-t border-slate-100 flex gap-5 z-50 rounded-t-[4rem] shadow-[0_-20px_50px_rgba(0,0,0,0.05)]">
-                        <div className="max-w-md mx-auto w-full flex gap-5">
-                            {currentStep > 0 && <button onClick={() => setCurrentStep(s => s - 1)} className="flex-1 bg-white border-4 border-slate-50 text-slate-400 font-black py-6 rounded-[2.5rem] uppercase text-[10px] tracking-widest italic transition-all">Anterior</button>}
-                            {currentStep < CATEGORIES.length - 1 && <button onClick={() => setCurrentStep(s => s + 1)} className="flex-[2] bg-slate-900 text-white font-black py-6 rounded-[2.5rem] shadow-2xl uppercase text-[10px] tracking-widest italic active:scale-95 border border-slate-50">Próximo</button>}
+                    <footer className="fixed bottom-0 left-0 right-0 p-10 bg-white/90 backdrop-blur-3xl border-t border-slate-100 flex gap-6 z-50 rounded-t-[5rem] shadow-2xl">
+                        <div className="max-w-md mx-auto w-full flex gap-6">
+                            {currentStep > 0 && <button onClick={() => setCurrentStep(s => s - 1)} className="flex-1 bg-white border-4 border-slate-100 text-slate-400 font-black py-7 rounded-[2.5rem] uppercase text-[11px] tracking-widest italic">Anterior</button>}
+                            {currentStep < CATEGORIES.length - 1 && <button onClick={() => setCurrentStep(s => s + 1)} className="flex-[2] bg-slate-900 text-white font-black py-7 rounded-[2.5rem] shadow-2xl uppercase text-[11px] tracking-widest italic active:scale-95">Próximo Passo</button>}
                         </div>
                     </footer>
                 </div>
