@@ -13,7 +13,7 @@
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .glass { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .animate-fade { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -34,44 +34,94 @@
             { id: 'paje', label: 'PAJÉ (Tático)', bg: 'bg-emerald-600', border: 'border-emerald-500' }
         ];
 
-        const CATEGORIES = ["Administrativo", "Vias Aéreas", "Mochila Vermelha", "Diversos & Trauma", "Armários/Balcão"];
+        const CATEGORIES = ["Administrativo & VA", "Mochila Vermelha", "Meds & DEA", "Gases & Trauma", "Armários & Balcão", "Finalizar"];
 
-        // CONSOLIDAÇÃO DAS 11 PÁGINAS DO FORMULÁRIO
+        // MATRIZ COMPLETA SAMU CANOAS (11 PÁGINAS INTEGRAIS)
         const CHECKLIST = [
-            // PASSO 0: ADMINISTRATIVO
+            // --- PASSO 0: PÁG 1 e 2 (Admin e VA) ---
             { id: 'smart', n: 'Smartphone e Carregador', cat: 0, opts: ['OK', 'FA'] },
             { id: 'carimbo', n: 'Carimbo da Viatura', cat: 0, opts: ['OK', 'FA'] },
-            
-            // PASSO 1: VIAS AÉREAS
-            { id: 'bolsa_va', n: 'Bolsa de Via Aérea', cat: 1, opts: ['OK', 'FA', 'N/A'] },
-            { id: 'bvm', n: 'AMBU Adulto/Ped/Neo', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'guedel', n: 'Cânulas de Guedel', cat: 1, opts: ['COMPLETAS', 'FALTA'] },
-            { id: 'insumos_va', n: 'Óculos, Seringa 20ml, Extensor O2', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'bolsa_va', n: 'Bolsa de Via Aérea', cat: 0, opts: ['OK', 'FA', 'N/A'] },
+            { id: 'bvm_ad', n: 'AMBU (BVM) Adulto', cat: 0, opts: ['OK', 'FA'] },
+            { id: 'bvm_ped', n: 'AMBU (BVM) Pediátrico', cat: 0, opts: ['OK', 'FA'] },
+            { id: 'bvm_neo', n: 'AMBU (BVM) Neonatal', cat: 0, opts: ['OK', 'FA'] },
+            { id: 'oculos_prot', n: 'Óculos de proteção (1 un)', cat: 0, opts: ['OK', 'FA'] },
+            { id: 'seringa20', n: 'Seringa 20ml (2 un)', cat: 0, opts: ['OK', 'FA'] },
+            { id: 'ext_o2_va', n: 'Extensor de O2 (1 un)', cat: 0, opts: ['OK', 'FA'] },
+            { id: 'guedel', n: 'Cânulas Guedel (0, 1, 2, 3, 4, 5)', cat: 0, opts: ['TODAS COMPLETAS', 'FALTA (Anotar)'] },
 
-            // PASSO 2: MOCHILA VERMELHA
-            { id: 'sinais', n: 'Esteto, Esfigmos (Ad/Ped/Obeso), Termômetro', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'hgt', n: 'Aparelho HGT + 10 Fitas/Lancetas', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'bolso_b', n: 'Kit Nebulização, Extensor O2, Sondas Asp.', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'ponta1', n: 'Naso Longa, Manta Térmica', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'ponta2', n: 'Descartex Frasco, Sacos de Lixo', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'interno', n: 'Ataduras, N95, Gaze, Torniquete', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'meds', n: 'Medicação Geral', cat: 2, opts: ['COMPLETA', 'INCOMPLETA'] },
-            { id: 'control', n: 'Medicação Controlada', cat: 2, opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
-            { id: 'dea', n: 'DEA (Pás Ad/Ped, Pilhas)', cat: 2, opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
+            // --- PASSO 1: PÁG 3, 4, 5, 6 e 7 (Mochila Vermelha - Sinais, Bolsos e Interno) ---
+            { id: 'esteto', n: 'Estetoscópio', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'esfig_ad', n: 'Esfigmomanômetro Adulto', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'esfig_ped', n: 'Esfigmomanômetro Pediátrico', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'esfig_ob', n: 'Esfigmomanômetro Obeso', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'hgt', n: 'HGT (Aparelho + 10 Fitas/Lancetas)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'termo', n: 'Termômetro', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'oxi_pulso', n: 'Oxímetro de Pulso', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'nebul', n: 'Kit Nebulímetro (1 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'asp_rig', n: 'Aspirador Rígido (1 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'ext_o2_b', n: 'Extensor de O2 (2 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'oculos_nasal', n: 'Óculos Nasal (2 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'curativos_b', n: 'Algodão / Esparadrapo / Micropore', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'ext_asp', n: 'Extensor de Aspiração (2 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'sondas_asp', n: 'Sonda Aspiração (8, 10, 12, 18 - 2 un/cada)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'naso_longa', n: 'Naso Longa (8, 14, 16, 20 - 2 un/cada)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'manta', n: 'Manta Térmica (2 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'perfuro', n: 'Pérfuro (Frasco Descartex)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'lixo', n: 'Saco de Lixo', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'atadura', n: 'Atadura (06, 10, 20 cm - 3 un/cada)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'n95', n: 'Máscara N95 (3 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'masc_cirur', n: 'Máscara Cirúrgica (3 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'compressa_int', n: 'Compressa (5 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'gaze_int', n: 'Gaze (10 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'sf_int', n: 'Kit Soro Fisiológico (1 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'rl_int', n: 'Kit Ringer Lactato (1 un)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'torniquete', n: 'Torniquete (1 un)', cat: 1, opts: ['OK', 'FA'] },
 
-            // PASSO 3: DIVERSOS E TRAUMA
-            { id: 'o2_g', n: 'O2 Cilindro Grande (Torpedo 1 e 2)', cat: 3, opts: ['LACRADO', 'MC>20', 'TROCA', 'FA'] },
-            { id: 'o2_p', n: 'O2 Portátil (Torpedo 1 e 2)', cat: 3, opts: ['LACRADO', 'MC>40', 'TROCA', 'FA'] },
-            { id: 'imob', n: 'Maca Rígida, Coxins, Cinto Polvo', cat: 3, opts: ['OK', 'TROCA', 'FA'] },
-            { id: 'ked', n: 'KED e Talas (P/M/G)', cat: 3, opts: ['OK', 'FA'] },
-            { id: 'colchao', n: 'Colchão Retrátil / Reserva', cat: 3, opts: ['OK', 'EM USO', 'FA'] },
-            { id: 'cones', n: 'Cones de Sinalização', cat: 3, opts: ['COMPLETOS', 'FA'] },
+            // --- PASSO 2: PÁG 7 continuação (Medicação e DEA) ---
+            { id: 'med_geral', n: 'Medicação Geral', cat: 2, opts: ['COMPLETA', 'INCOMPLETA', 'FA'] },
+            { id: 'med_ctrl', n: 'Medicações Controladas', cat: 2, opts: ['COMPLETA C/ LACRE', 'COMPLETA S/ LACRE', 'INCOMPLETA', 'FA'] },
+            { id: 'dea_status', n: 'DEA', cat: 2, opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
+            { id: 'dea_pas_ad', n: 'Pás Adulto (DEA)', cat: 2, opts: ['OK', 'FA'] },
+            { id: 'dea_pas_ped', n: 'Pás Pediátricas (DEA)', cat: 2, opts: ['OK', 'FA'] },
+            { id: 'dea_pilhas', n: 'Pilhas (DEA)', cat: 2, opts: ['OK', 'FA'] },
 
-            // PASSO 4: PAREDE E ARMÁRIOS
-            { id: 'parede', n: 'Fluxômetros, Máscaras Hudson, Frasco Asp.', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'colares', n: 'Colares Cervicais (Inf ao GG)', cat: 4, opts: ['COMPLETOS', 'FALTA'] },
-            { id: 'gavetas', n: 'Chave O2, Carregador Oxímetro, Lanterna', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'armario2', n: 'Compressas, Soros (Fis/Ringer/Glic), Almotolias', cat: 4, opts: ['OK', 'FA'] }
+            // --- PASSO 3: PÁG 8 (Diversos, O2 e Trauma) ---
+            { id: 'o2_g_t1', n: 'O2 Grande - Torpedo 1', cat: 3, opts: ['LACRADO', 'MC > 20', 'NECESSÁRIO TROCA', 'FALTA'] },
+            { id: 'o2_g_t2', n: 'O2 Grande - Torpedo 2', cat: 3, opts: ['LACRADO', 'MC > 20', 'NECESSÁRIO TROCA', 'FALTA'] },
+            { id: 'o2_p_t1', n: 'O2 Portátil - Torpedo 1', cat: 3, opts: ['LACRADO', 'MC > 40', 'NECESSÁRIO TROCA', 'FALTA'] },
+            { id: 'o2_p_t2', n: 'O2 Portátil - Torpedo 2', cat: 3, opts: ['LACRADO', 'MC > 40', 'NECESSÁRIO TROCA', 'FALTA'] },
+            { id: 'ar_comp', n: 'Cilindro Ar Comprimido', cat: 3, opts: ['LACRADO', 'MC > 20', 'NECESSÁRIO TROCA', 'FALTA'] },
+            { id: 'maca_rig', n: 'Maca Rígida', cat: 3, opts: ['OK', 'FALTA', 'NECESSÁRIO TROCA'] },
+            { id: 'coxins', n: 'Coxins', cat: 3, opts: ['OK', 'FALTA', 'NECESSÁRIO TROCA'] },
+            { id: 'cinto_polvo', n: 'Cinto Polvo', cat: 3, opts: ['OK', 'FALTA', 'NECESSÁRIO TROCA'] },
+            { id: 'velcros', n: 'Integridade Velcros', cat: 3, opts: ['OK', 'FALTA', 'NECESSÁRIO TROCA'] },
+            { id: 'ked', n: 'KED', cat: 3, opts: ['OK', 'FA', 'N/A'] },
+            { id: 'talas', n: 'Talas P, M, G', cat: 3, opts: ['OK', 'FA'] },
+            { id: 'cad_rodas', n: 'Cadeira de Rodas', cat: 3, opts: ['OK', 'FA'] },
+            { id: 'colchao_ret', n: 'Colchão Maca Retrátil', cat: 3, opts: ['OK', 'FA'] },
+            { id: 'colchao_res', n: 'Colchão Reserva', cat: 3, opts: ['OK', 'EM USO', 'FA'] },
+            { id: 'cones', n: 'Cones de Sinalização', cat: 3, opts: ['COMPLETOS (5)', 'FALTA (Anotar)'] },
+
+            // --- PASSO 4: PÁG 9, 10 e 11 (Parede e Armários) ---
+            { id: 'fluxo_parede', n: 'Fluxômetro Parede', cat: 4, opts: ['1', '2', 'FA'] },
+            { id: 'masc_hud_ad', n: 'Masc Hudson/Extensor ADULTO (2 de cada)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'masc_hud_ped', n: 'Masc Hudson/Extensor PEDIÁTRICO (2 de cada)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'frasco_parede', n: 'Frasco Aspiração (1 un)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'ext_sonda_parede', n: 'Extensão Aspiração / Sonda (1 de cada)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'cobertor', n: 'Cobertor de Lã (1 un)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'colares', n: 'Colar Cervical (Inf, PP, P, M, G, GG - 2 cada)', cat: 4, opts: ['TODOS COMPLETOS', 'FALTA (Anotar)'] },
+            { id: 'chave_o2', n: 'Chave de Oxigênio (1 un)', cat: 4, opts: ['OK', 'FALTA', 'FA'] },
+            { id: 'carreg_oxi', n: 'Carregador Oxímetro c/ cabo (1 un)', cat: 4, opts: ['OK', 'FALTA', 'FA'] },
+            { id: 'lanterna', n: 'Lanterna (1 un)', cat: 4, opts: ['OK', 'FALTA', 'FA'] },
+            { id: 'compressa_arm', n: 'Compressas (5 un)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'almotolias', n: 'Almotolias (Álcool / H2O2 - 1 cada)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'gaze_arm', n: 'Gaze (10 un)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'curativos_arm', n: 'Esparadrapo / Micropore (1 cada)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'caixa_descarp', n: 'Caixa Descarpack (1 un)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'sf_arm', n: 'Soro Fisiológico (1000/500/100 - 3 de cada)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'rl_arm', n: 'Ringer Lactato 500 (3 un)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'sg_arm', n: 'Soro Glicosado 500 (3 de cada)', cat: 4, opts: ['OK', 'FA'] }
         ];
 
         function App() {
@@ -91,13 +141,11 @@
                 
                 const today = new Date().toLocaleDateString('pt-BR');
                 const total = db.filter(d => d[4] !== 'INFO').length;
-                const oks = db.filter(d => ['OK', 'COMPLETAS', 'COMPLETA', 'C/ LACRE', 'LACRADO', 'MC>20', 'MC>40'].includes(d[5])).length;
+                const oks = db.filter(d => ['OK', 'COMPLETAS', 'COMPLETA', 'COMPLETA C/ LACRE', 'LACRADO', 'MC > 20', 'MC > 40', '1', '2', 'TODAS COMPLETAS', 'TODOS COMPLETOS', 'COMPLETOS (5)'].includes(d[5])).length;
                 
-                // Filtra o que deu problema
-                const falhas = ['FA', 'FALTA', 'INCOMPLETA', 'S/ LACRE', 'TROCA NECESSÁRIA', 'TROCA'];
+                const falhas = ['FA', 'FALTA', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA', 'FALTA (Anotar)'];
                 const nc = db.filter(d => falhas.includes(d[5])).map(d => ({ ts: d[0], v: d[1], p: d[2], r: d[3], i: d[4], o: d[6] || d[5] })).reverse();
                 
-                // Agrupa histórico por viatura/horário
                 const historyMap = db.reduce((acc, d) => {
                     if(d[4] === 'INFO') return acc;
                     const k = `${d[0]}_${d[2]}`;
@@ -140,7 +188,7 @@
             };
 
             const send = async () => {
-                if(!form.placa || !form.posto || !form.guerra) return alert("ERRO: Identificação Militar é obrigatória.");
+                if(!form.placa || !form.posto || !form.guerra) return alert("ERRO TÁTICO: Identificação Militar é obrigatória.");
                 setLoading(true);
                 const payload = {
                     action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`, obsGerais: form.obs,
@@ -169,7 +217,7 @@
                     <div className="text-center space-y-4">
                         <div className="bg-red-600 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(220,38,38,0.4)]"><i data-lucide="cross" className="text-white w-10 h-10"></i></div>
                         <h1 className="text-6xl font-black italic uppercase tracking-tighter">HACO <span className="text-red-600">SAE</span></h1>
-                        <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-xs">Auditoria SAMU Canoas</p>
+                        <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-xs">Auditoria Completa SAMU</p>
                     </div>
                     <div className="grid grid-cols-1 gap-6 w-full max-w-sm">
                         {VIATURAS.map(v => (
@@ -183,53 +231,58 @@
                 </div>
             );
 
-            // --- VIEW: COLETOR MOBILE (AS 11 PÁGINAS) ---
+            // --- VIEW: COLETOR MOBILE ---
             if (view === 'form') {
-                const isFinal = step === CATEGORIES.length;
+                const isFinal = step === CATEGORIES.length - 1;
                 const items = CHECKLIST.filter(i => i.cat === step);
 
                 return (
                     <div className="min-h-screen flex flex-col bg-slate-950 pb-32 animate-fade">
                         <header className={`p-6 ${vSel.bg} flex justify-between items-center sticky top-0 z-50 rounded-b-3xl shadow-2xl`}>
                             <button onClick={() => setView('menu')} className="bg-black/20 p-2 rounded-xl text-white"><i data-lucide="chevron-left"></i></button>
-                            <div className="text-center text-white"><h1 className="font-black uppercase text-sm tracking-tighter">{vSel.label}</h1></div>
-                            <span className="font-mono text-[10px] font-black bg-black/30 px-3 py-1 rounded-full text-white">{step + 1}/{CATEGORIES.length + 1}</span>
+                            <div className="text-center text-white"><h1 className="font-black uppercase text-xs tracking-widest">{vSel.label}</h1></div>
+                            <span className="font-mono text-[10px] font-black bg-black/30 px-3 py-1 rounded-full text-white">{step + 1}/{CATEGORIES.length}</span>
                         </header>
 
                         <main className="p-4 space-y-6 flex-1 overflow-y-auto no-scrollbar">
-                            {!isFinal && <h2 className="text-2xl font-black uppercase text-red-500 italic px-2 mb-6">{CATEGORIES[step]}</h2>}
+                            <h2 className="text-2xl font-black uppercase text-red-500 italic px-2 mb-6">{CATEGORIES[step]}</h2>
 
                             {step === 0 && (
                                 <div className="space-y-6 glass p-8 rounded-[2rem] border border-white/10">
-                                    <h3 className="font-black text-white text-sm uppercase mb-4">Identificação Profissional</h3>
-                                    <input type="text" placeholder="PLACA VIATURA" className="w-full p-5 bg-black/50 border border-white/10 rounded-2xl font-black text-center text-2xl uppercase text-white" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                    <h3 className="font-black text-white text-sm uppercase mb-4">Identificação</h3>
+                                    <input type="text" placeholder="PLACA VIATURA" className="w-full p-5 bg-black/50 border border-white/10 rounded-2xl font-black text-center text-2xl uppercase text-white outline-none focus:border-red-500" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
                                     <div className="grid grid-cols-2 gap-4">
-                                        <input type="text" placeholder="POSTO (1T)" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
-                                        <input type="text" placeholder="GUERRA" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="POSTO (1T)" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm outline-none focus:border-red-500" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="GUERRA" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm outline-none focus:border-red-500" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
                                     </div>
                                 </div>
                             )}
 
                             {!isFinal && items.map(i => (
                                 <div key={i.id} className="glass p-6 rounded-[2rem] space-y-5 border border-white/5">
-                                    <span className="font-black text-sm uppercase tracking-tight text-white block">{i.n}</span>
+                                    <span className="font-black text-[13px] uppercase tracking-tight text-white block">{i.n}</span>
                                     <div className="flex flex-wrap gap-2">
-                                        {i.opts.map(opt => (
-                                            <button key={opt} onClick={() => setForm({...form, items: {...form.items, [i.id]: { ...form.items[i.id], status: opt }}})} 
-                                                className={`px-4 py-3 rounded-xl font-black text-[10px] flex-1 transition-all ${form.items[i.id].status === opt ? (opt === 'FA' || opt === 'FALTA' || opt === 'TROCA' || opt.includes('INCOMPLETA') || opt.includes('S/ LACRE') ? 'bg-red-600 text-white shadow-lg scale-105' : 'bg-emerald-600 text-white shadow-lg scale-105') : 'bg-black/40 text-slate-400'}`}>
-                                                {opt}
-                                            </button>
-                                        ))}
+                                        {i.opts.map(opt => {
+                                            const isAlert = ['FA', 'FALTA', 'FALTA (Anotar)', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA'].includes(opt);
+                                            return (
+                                                <button key={opt} onClick={() => setForm({...form, items: {...form.items, [i.id]: { ...form.items[i.id], status: opt }}})} 
+                                                    className={`px-4 py-3 rounded-xl font-black text-[10px] flex-1 transition-all ${form.items[i.id].status === opt ? (isAlert ? 'bg-red-600 text-white shadow-lg scale-105 border border-red-500' : 'bg-emerald-600 text-white shadow-lg scale-105 border border-emerald-500') : 'bg-black/40 text-slate-400 border border-transparent'}`}>
+                                                    {opt}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
-                                    <input type="text" placeholder="Núm Lacre / Reposição / Obs..." className={`w-full p-4 bg-black/30 rounded-xl text-xs text-slate-200 border-none outline-none focus:ring-2 focus:ring-red-600/50 ${(form.items[i.id].status === 'FA' || form.items[i.id].status === 'FALTA') ? 'bg-red-950/20 placeholder-red-900 italic font-bold' : ''}`} value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
+                                    <input type="text" placeholder={form.items[i.id].status.includes('LACRE') ? "Digite o número do Lacre/Obs..." : "Observação / Descreva reposição..."} 
+                                        className={`w-full p-4 bg-black/30 rounded-xl text-xs text-slate-200 border-none outline-none focus:ring-2 focus:ring-red-600/50 ${['FA', 'FALTA', 'FALTA (Anotar)', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA'].includes(form.items[i.id].status) ? 'bg-red-950/20 placeholder-red-900 italic font-bold' : ''}`} 
+                                        value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
                                 </div>
                             ))}
 
                             {isFinal && (
-                                <div className="space-y-8 animate-fade mt-10">
+                                <div className="space-y-8 animate-fade">
                                     <div className="glass p-8 rounded-[2rem]">
-                                        <h3 className="font-black text-white text-sm uppercase mb-4">Observações Gerais</h3>
-                                        <textarea rows="4" placeholder="Descreva intercorrências da viatura, pendências de manutenção..." className="w-full p-5 bg-black/40 border border-white/10 rounded-2xl font-bold text-white text-xs outline-none focus:border-red-500" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
+                                        <h3 className="font-black text-white text-sm uppercase mb-4">Avarias & Observações Gerais</h3>
+                                        <textarea rows="5" placeholder="Descreva intercorrências da viatura, pendências de manutenção ou avarias no smartphone..." className="w-full p-5 bg-black/40 border border-white/10 rounded-2xl font-bold text-white text-xs outline-none focus:border-red-500" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
                                     </div>
                                     <div className="text-center space-y-6">
                                         <button onClick={send} disabled={loading} className="w-full bg-red-600 text-white font-black py-7 rounded-[2rem] shadow-[0_0_30px_rgba(220,38,38,0.4)] active:scale-95 transition-all text-sm uppercase tracking-widest">
@@ -242,7 +295,7 @@
 
                         <footer className="fixed bottom-0 left-0 right-0 p-6 glass border-t border-white/5 flex gap-4 bg-slate-950/95 z-50">
                             {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-white/5 p-5 rounded-2xl font-black uppercase text-xs text-slate-400">Voltar</button>}
-                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-white text-black p-5 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Continuar</button>}
+                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-white text-black p-5 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Continuar Checklist</button>}
                         </footer>
                     </div>
                 );
@@ -266,7 +319,7 @@
                                     <div><h1 className="text-8xl font-black tracking-tighter uppercase italic text-white leading-none">PRONTIDÃO <span className="text-red-600">SAE</span></h1><p className="text-slate-500 font-mono text-sm uppercase mt-4 tracking-[0.5em]">Ops Center - Auditoria SAMU Canoas</p></div>
                                     <div className="glass p-12 rounded-[3rem] text-center min-w-[280px] border-t-8 border-emerald-500">
                                         <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.op}%</span>
-                                        <p className="text-xs font-black text-slate-500 mt-4 tracking-widest uppercase italic">Frota Operacional</p>
+                                        <p className="text-xs font-black text-slate-500 mt-4 tracking-widest uppercase italic">Conformidade Operacional</p>
                                     </div>
                                 </header>
 
@@ -291,13 +344,13 @@
 
                                 <div className="glass p-12 rounded-[3.5rem] border border-red-900/30 relative overflow-hidden">
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[100px] rounded-full"></div>
-                                    <h3 className="text-sm font-black uppercase text-red-500 tracking-[0.5em] mb-10 flex items-center gap-4 italic"><i data-lucide="alert-triangle" className="animate-pulse"></i> Não Conformidades (NC) / Avarias</h3>
+                                    <h3 className="text-sm font-black uppercase text-red-500 tracking-[0.5em] mb-10 flex items-center gap-4 italic"><i data-lucide="alert-triangle" className="animate-pulse"></i> Não Conformidades (NC) / Avarias / Reposições</h3>
                                     <div className="grid grid-cols-2 gap-6 relative z-10">
                                         {audit.alerts.map((a, i) => (
                                             <div key={i} className="flex justify-between items-center p-6 bg-slate-950/80 rounded-3xl border border-white/5">
                                                 <div className="flex items-center gap-6 italic uppercase">
                                                     <div className="bg-red-600/20 text-red-500 p-4 rounded-xl"><i data-lucide="activity"></i></div>
-                                                    <div><p className="text-xl font-black leading-none text-white">{a.i}</p><p className="text-xs text-red-400 mt-2 font-bold">{a.o}</p></div>
+                                                    <div><p className="text-lg font-black leading-none text-white">{a.i}</p><p className="text-xs text-red-400 mt-2 font-bold">{a.o}</p></div>
                                                 </div>
                                                 <div className="text-right font-mono"><p className="text-sm font-black text-slate-400">{a.r}</p><p className="text-xs text-slate-600 mt-1">{a.p}</p></div>
                                             </div>
@@ -319,7 +372,7 @@
                                             </div>
                                             <div className="text-right">
                                                 <span className={`px-4 py-2 rounded-xl text-xs font-black ${h.errs === 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                                                    {h.errs === 0 ? '100% CONFORME' : `${h.errs} FALHAS REGISTRADAS`}
+                                                    {h.errs === 0 ? '100% CONFORME' : `${h.errs} ALERTA(S) REGISTRADO(S)`}
                                                 </span>
                                             </div>
                                         </div>
