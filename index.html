@@ -2,8 +2,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - Centro de Comando SAE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HACO - OPS CENTER SAE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -13,10 +13,10 @@
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .glass-card { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .animate-fade { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .neon-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; }
+        .neon-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); border: 1px solid #10b981; }
     </style>
 </head>
 <body>
@@ -25,360 +25,553 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // ⚠️ COLE A SUA URL NOVA AQUI ABAIXO ⚠️
-        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec"; 
+        const API_URL = "COLOQUE_SUA_URL_AQUI"; 
 
-        const AMBULANCE_TYPES = [
-            { id: 'basica', label: 'Básica (USB)', color: 'text-cyan-400', bg: 'bg-cyan-500' },
-            { id: 'avancada', label: 'Avançada (USA)', color: 'text-rose-400', bg: 'bg-rose-500' },
-            { id: 'paje', label: 'PAJÉ', color: 'text-emerald-400', bg: 'bg-emerald-500' },
-            { id: 'missoes', label: 'Missões', color: 'text-amber-400', bg: 'bg-amber-500' }
+        const VIATURAS = [
+            { id: 'basica', label: 'Básica (USB)', color: 'cyan' },
+            { id: 'avancada', label: 'Avançada (USA)', color: 'rose' },
+            { id: 'paje', label: 'PAJÉ (Tático)', color: 'emerald' },
+            { id: 'missoes', label: 'Missões (EVAM)', color: 'amber' }
         ];
 
-        const CATEGORIES = [
-            { id: 'info', label: 'Militar', icon: 'shield' },
-            { id: 'Equipamentos', label: 'Equipamentos', icon: 'stethoscope' },
-            { id: 'vias_aereas', label: 'Vias Aéreas', icon: 'wind' },
-            { id: 'revisar', label: 'Concluir', icon: 'check-circle' }
-        ];
-
-        const MASTER_CHECKLIST = [
-            { id: 'dea', label: 'DEA (Desfibrilador)', cat: 'Equipamentos', types: ['basica', 'paje'] },
-            { id: 'monitor', label: 'Monitor Multiparâmetros', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
-            { id: 'vent_mec', label: 'Ventilador Mecânico', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
-            { id: 'oximetro', label: 'Oxímetro de Pulso', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
-            { id: 'laringo', label: 'Laringoscópio Completo', cat: 'vias_aereas', types: ['avancada', 'missoes'] },
-            { id: 'tubos', label: 'Tubos Endotraqueais', cat: 'vias_aereas', types: ['avancada', 'missoes'] },
-            { id: 'ambu', label: 'AMBU c/ Reservatório', cat: 'vias_aereas', types: ['basica', 'avancada', 'paje', 'missoes'] }
+        const ITENS_MESTRE = [
+            { id: 'dea', n: 'DEA / Cardioversor', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'monitor', n: 'Monitor Multiparâmetros', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
+            { id: 'vent', n: 'Ventilador Mecânico', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
+            { id: 'ox', n: 'Cilindro O2 / Fluxômetro', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'laringo', n: 'Laringoscópio Completo', cat: 'Vias Aéreas', types: ['avancada', 'missoes'] },
+            { id: 'ambu', n: 'AMBU c/ Reservatório', cat: 'Vias Aéreas', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'tubos', n: 'Tubos / Guia / Cânulas', cat: 'Vias Aéreas', types: ['avancada', 'missoes'] },
+            { id: 'acesso', n: 'Kit Acesso Venoso', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] }
         ];
 
         function App() {
-            const [mode, setMode] = useState('selection'); 
-            const [adminTab, setAdminTab] = useState('monitor');
-            const [selectedType, setSelectedType] = useState(null);
-            const [currentStep, setCurrentStep] = useState(0);
-            const [formData, setFormData] = useState({ placa: '', posto: '', nomeGuerra: '', items: {} });
-            const [adminData, setAdminData] = useState([]);
+            const [view, setView] = useState('menu'); // menu, form, dash, report
+            const [viatura, setViatura] = useState(null);
+            const [passo, setPasso] = useState(0);
+            const [data, setData] = useState([]);
             const [loading, setLoading] = useState(false);
-            const [submitted, setSubmitted] = useState(false);
+            const [form, setForm] = useState({ placa: '', posto: '', guerra: '', items: {} });
 
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [mode, adminTab, submitted, currentStep, adminData]);
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, passo, data]);
 
-            // --- CÉREBRO DE AUDITORIA BLINDADO ---
+            // --- LÓGICA DE AUDITORIA ---
             const audit = useMemo(() => {
-                const defaultShifts = { MANHÃ: { ok: false }, TARDE: { ok: false }, NOITE: { ok: false } };
+                if (!data.length) return { op: 0, shifts: {}, history: [], alerts: [] };
+                const today = new Date().toLocaleDateString('pt-BR');
+                const nc = data.filter(d => d[5] === 'NC').map(d => ({ ts: d[0], v: d[1], p: d[2], r: d[3], i: d[4], o: d[6] })).reverse();
                 
-                if (!adminData || adminData.length === 0) {
-                    const emptyShifts = {};
-                    AMBULANCE_TYPES.forEach(t => emptyShifts[t.label] = { ...defaultShifts });
-                    return { operacional: 0, shifts: emptyShifts, history: [], alerts: [] };
-                }
-
-                const todayStr = new Date().toLocaleDateString('pt-BR');
-                const conforme = adminData.filter(d => d[5] === 'C').length;
-                
-                // Filtra as Falhas Críticas (NC)
-                const ncItems = adminData.filter(d => d[5] === 'NC').map(d => ({
-                    data: d[0], placa: d[2], resp: d[3], item: d[4], obs: d[6]
-                })).reverse();
-
-                // Agrupa para Relatórios
-                const history = Object.values(adminData.reduce((acc, d) => {
-                    const k = `${d[0]}_${d[2]}`;
-                    if (!acc[k]) acc[k] = { timestamp: d[0], tipo: d[1], placa: d[2], resp: d[3], items: [] };
-                    acc[k].items.push({ nome: d[4], status: d[5], obs: d[6] });
-                    return acc;
-                }, {})).reverse();
-
-                // Identifica Turnos com Regex Seguro
                 const shifts = {};
-                AMBULANCE_TYPES.forEach(t => {
-                    const logsToday = adminData.filter(d => d[1] === t.label && String(d[0]).includes(todayStr));
-                    
-                    const getShiftData = (startHour, endHour) => {
-                        const log = logsToday.find(d => {
-                            const match = String(d[0]).match(/\b(\d{1,2}):\d{2}/);
-                            if(!match) return false;
-                            const h = parseInt(match[1]);
-                            return h >= startHour && h < endHour;
-                        });
-                        return log ? { ok: true, user: log[3] } : { ok: false };
+                VIATURAS.forEach(v => {
+                    const logs = data.filter(d => d[1] === v.label && d[0].includes(today));
+                    const check = (s, e) => {
+                        const l = logs.find(d => { const h = parseInt(d[0].match(/(\d{2}):/)[1]); return h >= s && h < e; });
+                        return l ? { ok: true, u: l[3] } : { ok: false };
                     };
-                    
-                    const night1 = getShiftData(19, 24);
-                    const night2 = getShiftData(0, 7);
-                    const nightShift = night1.ok ? night1 : night2;
-
-                    shifts[t.label] = { 
-                        'MANHÃ': getShiftData(7, 13), 
-                        'TARDE': getShiftData(13, 19), 
-                        'NOITE': nightShift 
-                    };
+                    shifts[v.label] = { M: check(7, 13), T: check(13, 19), N: check(19, 24) || check(0, 7) };
                 });
 
-                return { 
-                    operacional: Math.round((conforme / adminData.length) * 100), 
-                    shifts, 
-                    history, 
-                    alerts: ncItems.slice(0, 8) 
-                };
-            }, [adminData]);
+                return { op: Math.round((data.filter(d => d[5] === 'C').length / data.length) * 100), shifts, alerts: nc.slice(0, 6), history: data.reverse() };
+            }, [data]);
 
-            // --- FUNÇÕES TÁTICAS ---
-            const handleTypeSelect = (type) => {
-                const initialItems = {};
-                MASTER_CHECKLIST.filter(i => i.types.includes(type.id)).forEach(i => { 
-                    initialItems[i.id] = { status: 'C', obs: '' }; 
-                });
-                
-                // Reseta os dados e injeta os itens antes de abrir a tela
-                setFormData({ placa: '', posto: '', nomeGuerra: '', items: initialItems });
-                setSelectedType(type);
-                setCurrentStep(0);
-                setMode('user');
+            // --- CONTROLES ---
+            const startCheck = (v) => {
+                const initItems = {};
+                ITENS_MESTRE.filter(i => i.types.includes(v.id)).forEach(i => initItems[i.id] = { status: 'C', obs: '' });
+                setForm({ placa: '', posto: '', guerra: '', items: initItems });
+                setViatura(v);
+                setPasso(0);
+                setView('form');
             };
 
-            const fetchData = async () => {
-                setLoading(true);
-                try {
-                    const res = await fetch(`${GOOGLE_SHEET_URL}?action=read&t=${Date.now()}`);
-                    const data = await res.json();
-                    setAdminData(data);
-                    setMode('admin');
-                } catch (e) { alert("ERRO: Falha ao comunicar com o Banco de Dados."); }
-                setLoading(false);
-            };
-
-            const handleSubmit = async () => {
-                if(!formData.placa || !formData.posto || !formData.nomeGuerra) {
-                    return alert("AVISO: Preencha os campos Posto, Guerra e Placa.");
-                }
+            const sendData = async () => {
+                if(!form.placa || !form.posto || !form.guerra) return alert("Erro: Identificação Militar incompleta.");
                 setLoading(true);
                 const payload = {
-                    action: 'write', tipo: selectedType.label, placa: formData.placa,
-                    responsavel: `${formData.posto} ${formData.nomeGuerra}`,
-                    items: Object.entries(formData.items).map(([id, val]) => ({ 
-                        nome: MASTER_CHECKLIST.find(i => i.id === id).label, 
-                        status: val.status, 
-                        obs: val.obs 
-                    }))
+                    action: 'write', tipo: viatura.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`,
+                    items: Object.entries(form.items).map(([id, val]) => ({ nome: ITENS_MESTRE.find(i => i.id === id).n, status: val.status, obs: val.obs }))
                 };
                 try {
-                    await fetch(GOOGLE_SHEET_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                    setSubmitted(true);
-                } catch (e) { alert("ERRO DE TRANSMISSÃO"); }
+                    await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                    setView('sucesso');
+                } catch (e) { alert("Erro de Rede."); }
                 setLoading(false);
             };
 
-            // --- VIEW: ADMIN DASHBOARD ---
-            if (mode === 'admin') {
-                return (
-                    <div className="min-h-screen flex animate-fade">
-                        <aside className="w-24 bg-slate-900 border-r border-white/5 flex flex-col items-center py-10 gap-8">
-                            <div className="bg-red-600 p-3 rounded-2xl shadow-lg shadow-red-600/30 text-white"><i data-lucide="shield-check"></i></div>
-                            <button onClick={() => setAdminTab('monitor')} className={`p-4 rounded-xl ${adminTab === 'monitor' ? 'bg-red-600 text-white' : 'text-slate-600 hover:text-white transition-all'}`}><i data-lucide="layout-dashboard"></i></button>
-                            <button onClick={() => setAdminTab('relatorio')} className={`p-4 rounded-xl ${adminTab === 'relatorio' ? 'bg-red-600 text-white' : 'text-slate-600 hover:text-white transition-all'}`}><i data-lucide="file-text"></i></button>
-                            <button onClick={fetchData} className={`p-4 text-slate-600 hover:text-white transition-all ${loading ? 'animate-spin' : ''}`}><i data-lucide="refresh-cw"></i></button>
-                            <button onClick={() => setMode('selection')} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-all"><i data-lucide="log-out"></i></button>
-                        </aside>
+            const sync = async () => {
+                setLoading(true);
+                try {
+                    const r = await fetch(`${API_URL}?action=read&t=${Date.now()}`);
+                    setData(await r.json());
+                    setView('dash');
+                } catch (e) { alert("Falha na sincronização."); }
+                setLoading(false);
+            };
 
-                        <main className="flex-1 p-10 overflow-y-auto space-y-12">
-                            {adminTab === 'monitor' ? (
-                                <>
-                                    <header className="flex justify-between items-end">
-                                        <div>
-                                            <h1 className="text-7xl font-black tracking-tighter uppercase italic leading-none">STATUS <span className="text-red-600">SAE</span></h1>
-                                            <p className="text-slate-500 font-mono text-xs uppercase mt-4 tracking-[0.5em]">HACO - Comando de Equipamentos</p>
-                                        </div>
-                                        <div className="glass-card p-10 rounded-[3rem] text-center border-t-4 border-emerald-500 min-w-[250px]">
-                                            <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.operacional}%</span>
-                                            <p className="text-xs font-black text-slate-500 uppercase mt-4">PRONTIDÃO GERAL</p>
-                                        </div>
-                                    </header>
-
-                                    <div className="grid grid-cols-4 gap-8">
-                                        {AMBULANCE_TYPES.map(t => (
-                                            <div key={t.id} className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden">
-                                                <div className={`absolute top-0 left-0 w-full h-1.5 ${t.bg}`}></div>
-                                                <h4 className={`text-xs font-black ${t.color} uppercase mb-10 border-b border-white/5 pb-4`}>{t.label}</h4>
-                                                <div className="space-y-8">
-                                                    {['MANHÃ', 'TARDE', 'NOITE'].map(s => (
-                                                        <div key={s} className="flex justify-between items-start">
-                                                            <div>
-                                                                <span className="block text-[10px] font-black text-slate-600">{s}</span>
-                                                                {audit.shifts[t.label] && audit.shifts[t.label][s].ok && <span className="text-[12px] font-bold text-white uppercase italic underline decoration-red-600">{audit.shifts[t.label][s].user}</span>}
-                                                            </div>
-                                                            <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black border ${audit.shifts[t.label] && audit.shifts[t.label][s].ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'}`}>
-                                                                {audit.shifts[t.label] && audit.shifts[t.label][s].ok ? 'CHECK' : 'PENDENTE'}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="glass-card p-10 rounded-[3.5rem] border border-red-900/30">
-                                        <h3 className="text-xs font-black uppercase text-red-500 mb-10 flex items-center gap-4 italic"><i data-lucide="alert-octagon"></i> FALHAS CRÍTICAS</h3>
-                                        <div className="grid grid-cols-2 gap-8">
-                                            {audit.alerts.map((a, i) => (
-                                                <div key={i} className="flex justify-between items-center p-6 bg-slate-950/50 rounded-3xl border border-white/5">
-                                                    <div className="flex items-center gap-6">
-                                                        <div className="bg-red-600/20 text-red-500 p-4 rounded-2xl"><i data-lucide="activity"></i></div>
-                                                        <div>
-                                                            <p className="text-lg font-black uppercase italic text-white leading-none">{a.item}</p>
-                                                            <p className="text-[11px] font-bold text-red-400 uppercase mt-2">{a.obs || "Material Faltante"}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="block text-sm font-black text-slate-400 uppercase italic">{a.resp}</span>
-                                                        <span className="text-[10px] font-bold text-slate-600 uppercase mt-2 block font-mono">{a.placa}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {audit.alerts.length === 0 && <div className="col-span-2 text-center py-10 opacity-20 font-black uppercase tracking-[0.5em] italic">Frota Operacional</div>}
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="space-y-12 animate-fade pb-20">
-                                    <h1 className="text-6xl font-black text-white italic uppercase leading-none">Relatórios <span className="text-red-600 underline">Auditoria</span></h1>
-                                    <div className="grid grid-cols-1 gap-10">
-                                        {audit.history.map((reg, i) => (
-                                            <div key={i} className="glass-card rounded-[3.5rem] overflow-hidden">
-                                                <div className="p-10 bg-slate-900/50 border-b border-white/5 flex justify-between items-center">
-                                                    <div>
-                                                        <span className="bg-white/5 text-slate-500 px-4 py-1 rounded-full text-[10px] font-black uppercase mb-4 inline-block">{reg.tipo}</span>
-                                                        <h3 className="text-5xl font-black text-white italic">{reg.placa}</h3>
-                                                        <p className="text-sm font-black text-red-500 uppercase mt-4 italic">{reg.resp}</p>
-                                                    </div>
-                                                    <div className="text-right font-mono">
-                                                        <p className="text-3xl font-black text-white">{reg.timestamp.split(' ')[1] || reg.timestamp.split(', ')[1]}</p>
-                                                        <p className="text-xs font-bold text-slate-600 mt-2">{reg.timestamp.split(' ')[0] || reg.timestamp.split(', ')[0]}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="p-10 grid grid-cols-3 gap-6">
-                                                    {reg.items.map((it, idx) => (
-                                                        <div key={idx} className={`p-6 rounded-3xl flex justify-between items-center border ${it.status === 'C' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/10 border-red-500/20'}`}>
-                                                            <div className="max-w-[75%]">
-                                                                <p className="text-[11px] font-black uppercase text-white leading-tight">{it.nome}</p>
-                                                                {it.obs && <p className="text-[10px] font-bold text-red-500 italic mt-2 uppercase">Obs: {it.obs}</p>}
-                                                            </div>
-                                                            <span className={`px-2 py-1 rounded text-[10px] font-black ${it.status === 'C' ? 'text-emerald-400' : 'text-red-400 underline'}`}>{it.status}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </main>
+            // --- TELAS ---
+            if (view === 'menu') return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12">
+                    <div className="text-center space-y-4">
+                        <div className="bg-red-600 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto shadow-2xl mb-6"><i data-lucide="cross" className="w-12 h-12"></i></div>
+                        <h1 className="text-7xl font-black italic tracking-tighter uppercase leading-none">HACO <span className="text-red-600">SAE</span></h1>
+                        <p className="text-slate-500 font-bold uppercase tracking-[0.5em] text-xs italic">Gestão de Prontidão de Socorro</p>
                     </div>
-                );
-            }
-
-            // --- VIEW: SUCESSO ---
-            if (submitted) {
-                return (
-                    <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-950 text-center animate-fade">
-                        <div className="w-24 h-24 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-10 animate-bounce border border-emerald-500/30"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
-                        <h1 className="text-4xl font-black mb-12 uppercase italic text-white">Transmissão Concluída</h1>
-                        <button onClick={() => { setSubmitted(false); setMode('selection'); }} className="w-full max-w-xs bg-white text-black font-black py-7 rounded-[2rem] shadow-2xl uppercase tracking-widest text-[11px] active:scale-95 transition-all">Nova Verificação</button>
-                    </div>
-                );
-            }
-
-            // --- VIEW: SELEÇÃO ---
-            if (mode === 'selection') {
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-10 bg-[#020617] animate-fade">
-                        <div className="max-w-md w-full text-center space-y-12">
-                            <div className="space-y-4 text-center">
-                                <div className="bg-red-600 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto shadow-2xl text-white mb-10"><i data-lucide="cross" className="w-12 h-12"></i></div>
-                                <h1 className="text-7xl font-black text-white italic tracking-tighter uppercase leading-none">HACO <span className="text-red-600">SAE</span></h1>
-                                <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.5em] italic">Controle de Equipamentos Táticos</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-8">
-                                {AMBULANCE_TYPES.map(t => (
-                                    <button key={t.id} onClick={() => handleTypeSelect(t)} className="glass-card p-10 rounded-[3.5rem] flex flex-col items-center gap-6 active:scale-95 hover:border-red-600 group transition-all">
-                                        <div className={`${t.bg} p-6 rounded-3xl text-white shadow-2xl group-hover:scale-110 transition-transform`}><i data-lucide="truck"></i></div>
-                                        <span className="font-black text-slate-400 group-hover:text-white uppercase text-[11px] tracking-widest">{t.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                            <button onClick={fetchData} className="w-full py-8 text-slate-600 font-black text-xs uppercase tracking-widest hover:text-red-500 italic border-t border-white/5 mt-10 transition-colors">Acesso Oficial Gestor</button>
-                        </div>
-                    </div>
-                );
-            }
-
-            // --- VIEW: CHECKLIST ---
-            const itemsToDisplay = MASTER_CHECKLIST.filter(i => i.types.includes(selectedType?.id) && i.cat === CATEGORIES[currentStep].id);
-
-            return (
-                <div className="min-h-screen pb-44 bg-slate-950 animate-fade">
-                    <header className={`sticky top-0 z-50 ${selectedType?.bg} text-white p-8 shadow-2xl flex justify-between items-center rounded-b-[4rem]`}>
-                        <div className="flex items-center gap-6">
-                            <button onClick={() => setMode('selection')} className="bg-white/20 p-3 rounded-2xl border border-white/10"><i data-lucide="chevron-left"></i></button>
-                            <h1 className="font-black text-3xl italic uppercase">{selectedType?.label}</h1>
-                        </div>
-                        <div className="bg-black/20 px-5 py-2.5 rounded-2xl font-mono text-xs font-black border border-white/10">{currentStep + 1} / {CATEGORIES.length}</div>
-                    </header>
-
-                    <nav className="flex overflow-x-auto no-scrollbar sticky top-[110px] z-40 px-6 py-6 bg-slate-950/80 backdrop-blur-xl border-b border-white/5">
-                        {CATEGORIES.map((cat, idx) => (
-                            <button key={cat.id} className={`flex-1 min-w-[120px] py-4 flex flex-col items-center gap-2 border-b-4 transition-all ${idx === currentStep ? 'border-red-600 text-red-600' : 'border-transparent text-slate-600'}`}>
-                                <i data-lucide={cat.icon} className="w-5 h-5"></i>
-                                <span className="text-[10px] font-black uppercase tracking-widest">{cat.label}</span>
+                    <div className="grid grid-cols-2 gap-6 max-w-2xl w-full">
+                        {VIATURAS.map(v => (
+                            <button key={v.id} onClick={() => startCheck(v)} className="glass p-10 rounded-[3rem] flex flex-col items-center gap-6 active:scale-95 transition-all hover:neon-green group">
+                                <div className={`bg-${v.color}-500 p-6 rounded-2xl shadow-xl group-hover:scale-110 transition-transform`}><i data-lucide="truck"></i></div>
+                                <span className="font-black text-slate-400 group-hover:text-white uppercase text-xs tracking-widest">{v.label}</span>
                             </button>
                         ))}
-                    </nav>
+                    </div>
+                    <button onClick={sync} className="w-full max-w-xs py-8 text-slate-600 font-black uppercase text-xs tracking-widest border-t border-white/5 mt-10 hover:text-red-500 transition-colors italic">Acesso Oficial Gestor</button>
+                </div>
+            );
 
-                    <main className="max-w-md mx-auto p-6 pt-12 space-y-8">
-                        {CATEGORIES[currentStep].id === 'info' && (
-                            <div className="glass-card p-12 rounded-[4rem] space-y-12">
-                                <div className="text-center italic"><h2 className="text-3xl font-black text-white uppercase">Identificação</h2><p className="text-slate-500 font-bold uppercase text-[10px] mt-4 tracking-widest">Protocolo SAE Obrigatório</p></div>
-                                <div className="space-y-8">
-                                    <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-8 rounded-[2.5rem] bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-black text-3xl text-center uppercase text-white shadow-inner transition-all" value={formData.placa} onChange={e => setFormData({...formData, placa: e.target.value.toUpperCase()})} />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <input type="text" placeholder="POSTO (EX: 1T)" className="w-full p-6 rounded-[2rem] bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-bold text-center text-white text-sm" value={formData.posto} onChange={e => setFormData({...formData, posto: e.target.value.toUpperCase()})} />
-                                        <input type="text" placeholder="NOME DE GUERRA" className="w-full p-6 rounded-[2rem] bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-bold text-center text-white text-sm" value={formData.nomeGuerra} onChange={e => setFormData({...formData, nomeGuerra: e.target.value.toUpperCase()})} />
+            if (view === 'dash') return (
+                <div className="min-h-screen flex">
+                    <aside className="w-24 bg-slate-900 border-r border-white/5 flex flex-col items-center py-10 gap-8">
+                        <div className="bg-red-600 p-3 rounded-2xl text-white shadow-lg"><i data-lucide="shield-check"></i></div>
+                        <button onClick={() => setAdminTab('monitor')} className={`p-4 rounded-xl ${adminTab === 'monitor' ? 'bg-red-600' : 'text-slate-600'}`}><i data-lucide="layout-dashboard"></i></button>
+                        <button onClick={() => setAdminTab('report')} className={`p-4 rounded-xl ${adminTab === 'report' ? 'bg-red-600' : 'text-slate-600'}`}><i data-lucide="file-text"></i></button>
+                        <button onClick={sync} className={`p-4 text-slate-600 ${loading ? 'animate-spin' : ''}`}><i data-lucide="refresh-cw"></i></button>
+                        <button onClick={() => setView('menu')} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-all"><i data-lucide="log-out"></i></button>
+                    </aside>
+                    <main className="flex-1 p-10 overflow-y-auto space-y-12">
+                        {adminTab === 'monitor' ? (
+                            <>
+                                <header className="flex justify-between items-end border-b border-white/5 pb-8">
+                                    <div><h1 className="text-7xl font-black tracking-tighter uppercase italic leading-none">STATUS <span className="text-red-600">SAE</span></h1><p className="text-slate-500 font-mono text-xs uppercase mt-4">OPS CENTER - HOSPITAL DE AERONÁUTICA DE CANOAS</p></div>
+                                    <div className="glass p-10 rounded-[3rem] text-center min-w-[250px] neon-green">
+                                        <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.op}%</span>
+                                        <p className="text-xs font-black text-slate-500 mt-4 uppercase tracking-widest italic">Frota Operacional</p>
+                                    </div>
+                                </header>
+                                <div className="grid grid-cols-4 gap-8">
+                                    {VIATURAS.map(v => (
+                                        <div key={v.id} className="glass p-8 rounded-[2.5rem] relative overflow-hidden border-b-4 border-white/5">
+                                            <div className={`absolute top-0 left-0 w-full h-1.5 bg-${v.color}-500 shadow-xl`}></div>
+                                            <h4 className="text-xs font-black text-white uppercase tracking-[0.3em] mb-10 border-b border-white/5 pb-4 italic">{v.label}</h4>
+                                            <div className="space-y-8">
+                                                {['MANHÃ', 'TARDE', 'NOITE'].map(s => {
+                                                    const log = audit.shifts[v.label][s[0]];
+                                                    return (
+                                                        <div key={s} className="flex justify-between items-start">
+                                                            <div><span className="block text-[10px] font-black text-slate-600 uppercase mb-1">{s}</span>{log?.ok && <span className="text-[12px] font-bold text-white uppercase italic underline decoration-red-600">{log.u}</span>}</div>
+                                                            <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black border ${log?.ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'}`}>{log?.ok ? 'CHECK' : 'PENDENTE'}</span>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="glass p-10 rounded-[3.5rem] neon-red">
+                                    <h3 className="text-xs font-black uppercase text-red-500 tracking-[0.5em] mb-10 flex items-center gap-4 italic"><i data-lucide="alert-octagon"></i> FALHAS CRÍTICAS DETECTADAS</h3>
+                                    <div className="grid grid-cols-2 gap-8">
+                                        {audit.alerts.map((a, i) => (
+                                            <div key={i} className="flex justify-between items-center p-6 bg-slate-950/50 rounded-3xl border border-white/5 transition-all hover:bg-red-950/20 group">
+                                                <div className="flex items-center gap-6 text-white uppercase italic">
+                                                    <div className="bg-red-600/20 text-red-500 p-4 rounded-2xl group-hover:bg-red-600 group-hover:text-white transition-all"><i data-lucide="activity"></i></div>
+                                                    <div><p className="text-lg font-black leading-none">{a.i}</p><p className="text-xs text-red-500 mt-2">{a.o || "Material Faltante"}</p></div>
+                                                </div>
+                                                <div className="text-right"><p className="text-sm font-black text-slate-400">{a.r}</p><p className="text-xs text-slate-600 mt-1 font-mono">{a.p}</p></div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                            </div>
-                        )}
-
-                        {itemsToDisplay.map(item => (
-                            <div key={item.id} className="glass-card p-10 rounded-[3.5rem] border border-white/5">
-                                <div className="flex justify-between items-center mb-10">
-                                    <span className="font-black text-white text-xl uppercase italic pr-6 leading-tight">{item.label}</span>
-                                    <div className="flex bg-black/40 p-2 rounded-2xl border border-white/5 shadow-inner">
-                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {status: 'C', obs: formData.items[item.id]?.obs || ''}}})} className={`px-10 py-5 rounded-xl text-xs font-black transition-all ${formData.items[item.id]?.status === 'C' ? 'bg-emerald-600 text-white shadow-lg scale-105' : 'text-slate-600'}`}>C</button>
-                                        <button onClick={() => setFormData({...formData, items: {...formData.items, [item.id]: {status: 'NC', obs: formData.items[item.id]?.obs || ''}}})} className={`px-10 py-5 rounded-xl text-xs font-black transition-all ${formData.items[item.id]?.status === 'NC' ? 'bg-red-600 text-white shadow-lg scale-105' : 'text-slate-600'}`}>NC</button>
-                                    </div>
+                            </>
+                        ) : (
+                            <div className="space-y-12 animate-fade pb-20">
+                                <h1 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">RELATÓRIOS <span className="text-red-600 underline">AUDITORIA</span></h1>
+                                <div className="grid grid-cols-1 gap-6">
+                                    {audit.history.slice(0, 30).map((r, i) => (
+                                        <div key={i} className="glass rounded-[2rem] p-6 flex justify-between items-center border border-white/5 hover:bg-white/5 transition-all">
+                                            <div className="flex gap-8 items-center">
+                                                <span className="font-mono text-slate-600 text-xs">{r[0]}</span>
+                                                <span className="bg-slate-800 text-white px-3 py-1 rounded text-[10px] font-black uppercase">{r[1]}</span>
+                                                <span className="font-black text-white italic">{r[2]}</span>
+                                                <span className="text-red-500 font-bold uppercase text-xs">{r[3]}</span>
+                                            </div>
+                                            <div className="flex gap-6 items-center">
+                                                <span className="text-slate-400 uppercase text-[10px]">{r[4]}</span>
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black ${r[5] === 'C' ? 'text-emerald-500' : 'text-red-500'}`}>{r[5]}</span>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <input type="text" placeholder="Observação técnica..." className={`w-full p-6 text-xs rounded-[2rem] bg-black/40 outline-none focus:ring-4 focus:ring-red-600/20 text-slate-300 transition-all ${formData.items[item.id]?.status === 'NC' ? 'border border-red-900 text-red-400 italic font-bold bg-red-950/20' : ''}`} value={formData.items[item.id]?.obs || ''} onChange={e => setFormData({...formData, items: {...formData.items, [item.id]: {...formData.items[item.id], obs: e.target.value}}})} />
-                            </div>
-                        ))}
-
-                        {CATEGORIES[currentStep].id === 'revisar' && (
-                            <div className="bg-red-600 text-white p-14 rounded-[5rem] text-center shadow-2xl space-y-12 border-t-8 border-red-700">
-                                <i data-lucide="send" className="w-12 h-12 mx-auto"></i>
-                                <h2 className="text-5xl font-black italic uppercase leading-none">CONCLUIR<br/>AUDITORIA</h2>
-                                <button onClick={handleSubmit} disabled={loading} className="w-full bg-slate-950 text-white font-black py-9 rounded-[3rem] shadow-2xl uppercase tracking-widest text-[12px] active:scale-95 transition-all">
-                                    {loading ? 'TRANSMITINDO...' : 'GRAVAR AUDITORIA'}
-                                </button>
                             </div>
                         )}
                     </main>
+                </div>
+            );
 
-                    <footer className="fixed bottom-0 left-0 right-0 p-10 bg-slate-950/90 border-t border-white/5 flex gap-8 z-50 rounded-t-[5rem] shadow-2xl">
-                        <div className="max-w-md mx-auto w-full flex gap-6">
-                            {currentStep > 0 && <button onClick={() => setCurrentStep(currentStep - 1)} className="flex-1 bg-white/5 border-2 border-white/10 text-slate-400 font-black py-8 rounded-[2.5rem] uppercase tracking-widest text-[11px] italic transition-all active:bg-white/10">Anterior</button>}
-                            {currentStep < CATEGORIES.length - 1 && <button onClick={() => setCurrentStep(currentStep + 1)} className="flex-[2] bg-slate-900 text-white font-black py-8 rounded-[2.5rem] shadow-2xl uppercase tracking-widest text-[11px] italic border border-white/10 active:scale-95 transition-all">Próximo Passo</button>}
-                        </div>
-                    </footer>
+            if (view === 'form') {
+                const cats = CATEGORIES;
+                const items = ITENS_MESTRE.filter(i => i.types.includes(viatura.id) && i.cat === cats[passo].label);
+
+                return (
+                    <div className="min-h-screen flex flex-col pb-44 animate-fade">
+                        <header className={`sticky top-0 z-50 bg-${viatura.color}-600 text-white p-8 shadow-2xl flex justify-between items-center rounded-b-[4rem]`}>
+                            <div className="flex items-center gap-6">
+                                <button onClick={() => setView('menu')} className="bg-white/20 p-3 rounded-2xl"><i data-lucide="chevron-left"></i></button>
+                                <h1 className="font-black text-3xl italic uppercase tracking-tighter">{viatura.label}</h1>
+                            </div>
+                            <div className="bg-black/20 px-5 py-2.5 rounded-2xl font-mono text-xs font-black">{passo + 1} / {cats.length}</div>
+                        </header>
+
+                        <nav className="flex overflow-x-auto no-scrollbar sticky top-[110px] z-40 px-6 py-6 glass border-b border-white/5">
+                            {cats.map((c, idx) => (
+                                <button key={c.id} onClick={() => setPasso(idx)} className={`flex-1 min-w-[140px] py-4 flex flex-col items-center gap-2 border-b-4 transition-all ${idx === passo ? 'border-red-600 text-red-600' : 'border-transparent text-slate-600'}`}>
+                                    <i data-lucide={c.icon} className="w-5 h-5"></i><span className="text-[10px] font-black uppercase tracking-widest">{c.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+
+                        <main className="max-w-2xl mx-auto w-full p-6 pt-12 space-y-8">
+                            {cats[passo].id === 'info' && (
+                                <div className="glass p-12 rounded-[4rem] space-y-12">
+                                    <div className="text-center italic"><h2 className="text-3xl font-black text-white uppercase">Identificação</h2><p className="text-slate-500 font-bold uppercase text-[10px] mt-4">Protocolo Militar SAE HACO</p></div>
+                                    <div className="space-y-8">
+                                        <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-8 rounded-[2.5rem] bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-black text-4xl text-center uppercase text-white shadow-inner transition-all" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <input type="text" placeholder="POSTO (EX: 1T)" className="w-full p-6 rounded-3xl bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-bold text-center text-white" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                            <input type="text" placeholder="GUERRA" className="w-full p-6 rounded-3xl bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-bold text-center text-white" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {items.map(i => (
+                                <div key={i.id} className="glass p-10 rounded-[3.5rem] border border-white/5">
+                                    <div className="flex justify-between items-center mb-10">
+                                        <span className="font-black text-white text-2xl uppercase italic pr-6 leading-tight">{i.n}</span>
+                                        <div className="flex bg-black/40 p-2 rounded-2xl border border-white/5">
+                                            <button onClick={() => setForm({...form, items: {...form.items, [i.id]: {status: 'C', obs: form.items[i.id]?.obs || ''}}})} className={`px-10 py-5 rounded-xl text-xs font-black transition-all ${form.items[i.id]?.status === 'C' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-600'}`}>C</button>
+                                            <button onClick={() => setForm({...form, items: {...form.items, [i.id]: {status: 'NC', obs: form.items[i.id]?.obs || ''}}})} className={`px-10 py-5 rounded-xl text-xs font-black transition-all ${form.items[i.id]?.status === 'NC' ? 'bg-red-600 text-white shadow-xl scale-110' : 'text-slate-600'}`}>NC</button>
+                                        </div>
+                                    </div>
+                                    <input type="text" placeholder="Observação técnica SAE..." className={`w-full p-6 text-xs rounded-[2rem] bg-black/40 outline-none focus:ring-4 focus:ring-red-600/10 text-slate-300 ${form.items[i.id]?.status === 'NC' ? 'border border-red-900 text-red-400 font-bold bg-red-950/20' : ''}`} value={form.items[i.id]?.obs || ''} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
+                                </div>
+                            ))}
+
+                            {cats[passo].id === 'fim' && (
+                                <div className="bg-red-600 text-white p-14 rounded-[5rem] text-center space-y-12 border-t-8 border-red-700 animate-fade">
+                                    <i data-lucide="send" className="w-12 h-12 mx-auto animate-pulse"></i>
+                                    <h2 className="text-5xl font-black italic uppercase leading-none">CONCLUIR<br/>AUDITORIA</h2>
+                                    <button onClick={sendData} disabled={loading} className="w-full bg-slate-950 text-white font-black py-9 rounded-[3rem] shadow-2xl uppercase text-[12px] active:scale-95 transition-all">
+                                        {loading ? 'TRANSMITINDO...' : 'EXECUTAR GRAVAÇÃO'}
+                                    </button>
+                                </div>
+                            )}
+                        </main>
+
+                        <footer className="fixed bottom-0 left-0 right-0 p-10 glass border-t border-white/5 flex gap-8 z-50 rounded-t-[5rem] shadow-2xl">
+                            <div className="max-w-2xl mx-auto w-full flex gap-6">
+                                {passo > 0 && <button onClick={() => setPasso(passo - 1)} className="flex-1 bg-white/5 border-2 border-white/10 text-slate-400 font-black py-8 rounded-[2.5rem] uppercase text-xs italic">Anterior</button>}
+                                {passo < cats.length - 1 && <button onClick={() => setPasso(passo + 1)} className="flex-[2] bg-slate-900 text-white font-black py-8 rounded-[2.5rem] shadow-2xl uppercase text-xs italic">Próximo Passo</button>}
+                            </div>
+                        </footer>
+                    </div>
+                );
+            }
+
+            if (view === 'sucesso') return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center space-y-10 animate-fade">
+                    <div className="w-24 h-24 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-10 animate-bounce border border-emerald-500/30"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
+                    <h1 className="text-5xl font-black italic text-white uppercase tracking-tighter">Missão<br/>Cumprida</h1>
+                    <button onClick={resetApp} className="w-full max-w-xs bg-white text-black font-black py-8 rounded-[2rem] shadow-2xl uppercase tracking-widest text-xs">Nova Verificação</button>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HACO - OPS CENTER SAE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .neon-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; }
+        .neon-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); border: 1px solid #10b981; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const API_URL = "COLOQUE_SUA_URL_AQUI"; 
+
+        const VIATURAS = [
+            { id: 'basica', label: 'Básica (USB)', color: 'cyan' },
+            { id: 'avancada', label: 'Avançada (USA)', color: 'rose' },
+            { id: 'paje', label: 'PAJÉ (Tático)', color: 'emerald' },
+            { id: 'missoes', label: 'Missões (EVAM)', color: 'amber' }
+        ];
+
+        const ITENS_MESTRE = [
+            { id: 'dea', n: 'DEA / Cardioversor', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'monitor', n: 'Monitor Multiparâmetros', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
+            { id: 'vent', n: 'Ventilador Mecânico', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
+            { id: 'ox', n: 'Cilindro O2 / Fluxômetro', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'laringo', n: 'Laringoscópio Completo', cat: 'Vias Aéreas', types: ['avancada', 'missoes'] },
+            { id: 'ambu', n: 'AMBU c/ Reservatório', cat: 'Vias Aéreas', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'tubos', n: 'Tubos / Guia / Cânulas', cat: 'Vias Aéreas', types: ['avancada', 'missoes'] },
+            { id: 'acesso', n: 'Kit Acesso Venoso', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] }
+        ];
+
+        function App() {
+            const [view, setView] = useState('menu'); // menu, form, dash, report
+            const [viatura, setViatura] = useState(null);
+            const [passo, setPasso] = useState(0);
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [form, setForm] = useState({ placa: '', posto: '', guerra: '', items: {} });
+
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, passo, data]);
+
+            // --- LÓGICA DE AUDITORIA ---
+            const audit = useMemo(() => {
+                if (!data.length) return { op: 0, shifts: {}, history: [], alerts: [] };
+                const today = new Date().toLocaleDateString('pt-BR');
+                const nc = data.filter(d => d[5] === 'NC').map(d => ({ ts: d[0], v: d[1], p: d[2], r: d[3], i: d[4], o: d[6] })).reverse();
+                
+                const shifts = {};
+                VIATURAS.forEach(v => {
+                    const logs = data.filter(d => d[1] === v.label && d[0].includes(today));
+                    const check = (s, e) => {
+                        const l = logs.find(d => { const h = parseInt(d[0].match(/(\d{2}):/)[1]); return h >= s && h < e; });
+                        return l ? { ok: true, u: l[3] } : { ok: false };
+                    };
+                    shifts[v.label] = { M: check(7, 13), T: check(13, 19), N: check(19, 24) || check(0, 7) };
+                });
+
+                return { op: Math.round((data.filter(d => d[5] === 'C').length / data.length) * 100), shifts, alerts: nc.slice(0, 6), history: data.reverse() };
+            }, [data]);
+
+            // --- CONTROLES ---
+            const startCheck = (v) => {
+                const initItems = {};
+                ITENS_MESTRE.filter(i => i.types.includes(v.id)).forEach(i => initItems[i.id] = { status: 'C', obs: '' });
+                setForm({ placa: '', posto: '', guerra: '', items: initItems });
+                setViatura(v);
+                setPasso(0);
+                setView('form');
+            };
+
+            const sendData = async () => {
+                if(!form.placa || !form.posto || !form.guerra) return alert("Erro: Identificação Militar incompleta.");
+                setLoading(true);
+                const payload = {
+                    action: 'write', tipo: viatura.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`,
+                    items: Object.entries(form.items).map(([id, val]) => ({ nome: ITENS_MESTRE.find(i => i.id === id).n, status: val.status, obs: val.obs }))
+                };
+                try {
+                    await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                    setView('sucesso');
+                } catch (e) { alert("Erro de Rede."); }
+                setLoading(false);
+            };
+
+            const sync = async () => {
+                setLoading(true);
+                try {
+                    const r = await fetch(`${API_URL}?action=read&t=${Date.now()}`);
+                    setData(await r.json());
+                    setView('dash');
+                } catch (e) { alert("Falha na sincronização."); }
+                setLoading(false);
+            };
+
+            // --- TELAS ---
+            if (view === 'menu') return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12">
+                    <div className="text-center space-y-4">
+                        <div className="bg-red-600 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto shadow-2xl mb-6"><i data-lucide="cross" className="w-12 h-12"></i></div>
+                        <h1 className="text-7xl font-black italic tracking-tighter uppercase leading-none">HACO <span className="text-red-600">SAE</span></h1>
+                        <p className="text-slate-500 font-bold uppercase tracking-[0.5em] text-xs italic">Gestão de Prontidão de Socorro</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-6 max-w-2xl w-full">
+                        {VIATURAS.map(v => (
+                            <button key={v.id} onClick={() => startCheck(v)} className="glass p-10 rounded-[3rem] flex flex-col items-center gap-6 active:scale-95 transition-all hover:neon-green group">
+                                <div className={`bg-${v.color}-500 p-6 rounded-2xl shadow-xl group-hover:scale-110 transition-transform`}><i data-lucide="truck"></i></div>
+                                <span className="font-black text-slate-400 group-hover:text-white uppercase text-xs tracking-widest">{v.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={sync} className="w-full max-w-xs py-8 text-slate-600 font-black uppercase text-xs tracking-widest border-t border-white/5 mt-10 hover:text-red-500 transition-colors italic">Acesso Oficial Gestor</button>
+                </div>
+            );
+
+            if (view === 'dash') return (
+                <div className="min-h-screen flex">
+                    <aside className="w-24 bg-slate-900 border-r border-white/5 flex flex-col items-center py-10 gap-8">
+                        <div className="bg-red-600 p-3 rounded-2xl text-white shadow-lg"><i data-lucide="shield-check"></i></div>
+                        <button onClick={() => setAdminTab('monitor')} className={`p-4 rounded-xl ${adminTab === 'monitor' ? 'bg-red-600' : 'text-slate-600'}`}><i data-lucide="layout-dashboard"></i></button>
+                        <button onClick={() => setAdminTab('report')} className={`p-4 rounded-xl ${adminTab === 'report' ? 'bg-red-600' : 'text-slate-600'}`}><i data-lucide="file-text"></i></button>
+                        <button onClick={sync} className={`p-4 text-slate-600 ${loading ? 'animate-spin' : ''}`}><i data-lucide="refresh-cw"></i></button>
+                        <button onClick={() => setView('menu')} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-all"><i data-lucide="log-out"></i></button>
+                    </aside>
+                    <main className="flex-1 p-10 overflow-y-auto space-y-12">
+                        {adminTab === 'monitor' ? (
+                            <>
+                                <header className="flex justify-between items-end border-b border-white/5 pb-8">
+                                    <div><h1 className="text-7xl font-black tracking-tighter uppercase italic leading-none">STATUS <span className="text-red-600">SAE</span></h1><p className="text-slate-500 font-mono text-xs uppercase mt-4">OPS CENTER - HOSPITAL DE AERONÁUTICA DE CANOAS</p></div>
+                                    <div className="glass p-10 rounded-[3rem] text-center min-w-[250px] neon-green">
+                                        <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.op}%</span>
+                                        <p className="text-xs font-black text-slate-500 mt-4 uppercase tracking-widest italic">Frota Operacional</p>
+                                    </div>
+                                </header>
+                                <div className="grid grid-cols-4 gap-8">
+                                    {VIATURAS.map(v => (
+                                        <div key={v.id} className="glass p-8 rounded-[2.5rem] relative overflow-hidden border-b-4 border-white/5">
+                                            <div className={`absolute top-0 left-0 w-full h-1.5 bg-${v.color}-500 shadow-xl`}></div>
+                                            <h4 className="text-xs font-black text-white uppercase tracking-[0.3em] mb-10 border-b border-white/5 pb-4 italic">{v.label}</h4>
+                                            <div className="space-y-8">
+                                                {['MANHÃ', 'TARDE', 'NOITE'].map(s => {
+                                                    const log = audit.shifts[v.label][s[0]];
+                                                    return (
+                                                        <div key={s} className="flex justify-between items-start">
+                                                            <div><span className="block text-[10px] font-black text-slate-600 uppercase mb-1">{s}</span>{log?.ok && <span className="text-[12px] font-bold text-white uppercase italic underline decoration-red-600">{log.u}</span>}</div>
+                                                            <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black border ${log?.ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'}`}>{log?.ok ? 'CHECK' : 'PENDENTE'}</span>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="glass p-10 rounded-[3.5rem] neon-red">
+                                    <h3 className="text-xs font-black uppercase text-red-500 tracking-[0.5em] mb-10 flex items-center gap-4 italic"><i data-lucide="alert-octagon"></i> FALHAS CRÍTICAS DETECTADAS</h3>
+                                    <div className="grid grid-cols-2 gap-8">
+                                        {audit.alerts.map((a, i) => (
+                                            <div key={i} className="flex justify-between items-center p-6 bg-slate-950/50 rounded-3xl border border-white/5 transition-all hover:bg-red-950/20 group">
+                                                <div className="flex items-center gap-6 text-white uppercase italic">
+                                                    <div className="bg-red-600/20 text-red-500 p-4 rounded-2xl group-hover:bg-red-600 group-hover:text-white transition-all"><i data-lucide="activity"></i></div>
+                                                    <div><p className="text-lg font-black leading-none">{a.i}</p><p className="text-xs text-red-500 mt-2">{a.o || "Material Faltante"}</p></div>
+                                                </div>
+                                                <div className="text-right"><p className="text-sm font-black text-slate-400">{a.r}</p><p className="text-xs text-slate-600 mt-1 font-mono">{a.p}</p></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="space-y-12 animate-fade pb-20">
+                                <h1 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">RELATÓRIOS <span className="text-red-600 underline">AUDITORIA</span></h1>
+                                <div className="grid grid-cols-1 gap-6">
+                                    {audit.history.slice(0, 30).map((r, i) => (
+                                        <div key={i} className="glass rounded-[2rem] p-6 flex justify-between items-center border border-white/5 hover:bg-white/5 transition-all">
+                                            <div className="flex gap-8 items-center">
+                                                <span className="font-mono text-slate-600 text-xs">{r[0]}</span>
+                                                <span className="bg-slate-800 text-white px-3 py-1 rounded text-[10px] font-black uppercase">{r[1]}</span>
+                                                <span className="font-black text-white italic">{r[2]}</span>
+                                                <span className="text-red-500 font-bold uppercase text-xs">{r[3]}</span>
+                                            </div>
+                                            <div className="flex gap-6 items-center">
+                                                <span className="text-slate-400 uppercase text-[10px]">{r[4]}</span>
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black ${r[5] === 'C' ? 'text-emerald-500' : 'text-red-500'}`}>{r[5]}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+
+            if (view === 'form') {
+                const cats = CATEGORIES;
+                const items = ITENS_MESTRE.filter(i => i.types.includes(viatura.id) && i.cat === cats[passo].label);
+
+                return (
+                    <div className="min-h-screen flex flex-col pb-44 animate-fade">
+                        <header className={`sticky top-0 z-50 bg-${viatura.color}-600 text-white p-8 shadow-2xl flex justify-between items-center rounded-b-[4rem]`}>
+                            <div className="flex items-center gap-6">
+                                <button onClick={() => setView('menu')} className="bg-white/20 p-3 rounded-2xl"><i data-lucide="chevron-left"></i></button>
+                                <h1 className="font-black text-3xl italic uppercase tracking-tighter">{viatura.label}</h1>
+                            </div>
+                            <div className="bg-black/20 px-5 py-2.5 rounded-2xl font-mono text-xs font-black">{passo + 1} / {cats.length}</div>
+                        </header>
+
+                        <nav className="flex overflow-x-auto no-scrollbar sticky top-[110px] z-40 px-6 py-6 glass border-b border-white/5">
+                            {cats.map((c, idx) => (
+                                <button key={c.id} onClick={() => setPasso(idx)} className={`flex-1 min-w-[140px] py-4 flex flex-col items-center gap-2 border-b-4 transition-all ${idx === passo ? 'border-red-600 text-red-600' : 'border-transparent text-slate-600'}`}>
+                                    <i data-lucide={c.icon} className="w-5 h-5"></i><span className="text-[10px] font-black uppercase tracking-widest">{c.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+
+                        <main className="max-w-2xl mx-auto w-full p-6 pt-12 space-y-8">
+                            {cats[passo].id === 'info' && (
+                                <div className="glass p-12 rounded-[4rem] space-y-12">
+                                    <div className="text-center italic"><h2 className="text-3xl font-black text-white uppercase">Identificação</h2><p className="text-slate-500 font-bold uppercase text-[10px] mt-4">Protocolo Militar SAE HACO</p></div>
+                                    <div className="space-y-8">
+                                        <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-8 rounded-[2.5rem] bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-black text-4xl text-center uppercase text-white shadow-inner transition-all" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <input type="text" placeholder="POSTO (EX: 1T)" className="w-full p-6 rounded-3xl bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-bold text-center text-white" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                            <input type="text" placeholder="GUERRA" className="w-full p-6 rounded-3xl bg-white/5 border-2 border-transparent focus:border-red-600 outline-none font-bold text-center text-white" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {items.map(i => (
+                                <div key={i.id} className="glass p-10 rounded-[3.5rem] border border-white/5">
+                                    <div className="flex justify-between items-center mb-10">
+                                        <span className="font-black text-white text-2xl uppercase italic pr-6 leading-tight">{i.n}</span>
+                                        <div className="flex bg-black/40 p-2 rounded-2xl border border-white/5">
+                                            <button onClick={() => setForm({...form, items: {...form.items, [i.id]: {status: 'C', obs: form.items[i.id]?.obs || ''}}})} className={`px-10 py-5 rounded-xl text-xs font-black transition-all ${form.items[i.id]?.status === 'C' ? 'bg-emerald-600 text-white shadow-xl scale-110' : 'text-slate-600'}`}>C</button>
+                                            <button onClick={() => setForm({...form, items: {...form.items, [i.id]: {status: 'NC', obs: form.items[i.id]?.obs || ''}}})} className={`px-10 py-5 rounded-xl text-xs font-black transition-all ${form.items[i.id]?.status === 'NC' ? 'bg-red-600 text-white shadow-xl scale-110' : 'text-slate-600'}`}>NC</button>
+                                        </div>
+                                    </div>
+                                    <input type="text" placeholder="Observação técnica SAE..." className={`w-full p-6 text-xs rounded-[2rem] bg-black/40 outline-none focus:ring-4 focus:ring-red-600/10 text-slate-300 ${form.items[i.id]?.status === 'NC' ? 'border border-red-900 text-red-400 font-bold bg-red-950/20' : ''}`} value={form.items[i.id]?.obs || ''} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
+                                </div>
+                            ))}
+
+                            {cats[passo].id === 'fim' && (
+                                <div className="bg-red-600 text-white p-14 rounded-[5rem] text-center space-y-12 border-t-8 border-red-700 animate-fade">
+                                    <i data-lucide="send" className="w-12 h-12 mx-auto animate-pulse"></i>
+                                    <h2 className="text-5xl font-black italic uppercase leading-none">CONCLUIR<br/>AUDITORIA</h2>
+                                    <button onClick={sendData} disabled={loading} className="w-full bg-slate-950 text-white font-black py-9 rounded-[3rem] shadow-2xl uppercase text-[12px] active:scale-95 transition-all">
+                                        {loading ? 'TRANSMITINDO...' : 'EXECUTAR GRAVAÇÃO'}
+                                    </button>
+                                </div>
+                            )}
+                        </main>
+
+                        <footer className="fixed bottom-0 left-0 right-0 p-10 glass border-t border-white/5 flex gap-8 z-50 rounded-t-[5rem] shadow-2xl">
+                            <div className="max-w-2xl mx-auto w-full flex gap-6">
+                                {passo > 0 && <button onClick={() => setPasso(passo - 1)} className="flex-1 bg-white/5 border-2 border-white/10 text-slate-400 font-black py-8 rounded-[2.5rem] uppercase text-xs italic">Anterior</button>}
+                                {passo < cats.length - 1 && <button onClick={() => setPasso(passo + 1)} className="flex-[2] bg-slate-900 text-white font-black py-8 rounded-[2.5rem] shadow-2xl uppercase text-xs italic">Próximo Passo</button>}
+                            </div>
+                        </footer>
+                    </div>
+                );
+            }
+
+            if (view === 'sucesso') return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center space-y-10 animate-fade">
+                    <div className="w-24 h-24 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-10 animate-bounce border border-emerald-500/30"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
+                    <h1 className="text-5xl font-black italic text-white uppercase tracking-tighter">Missão<br/>Cumprida</h1>
+                    <button onClick={resetApp} className="w-full max-w-xs bg-white text-black font-black py-8 rounded-[2rem] shadow-2xl uppercase tracking-widest text-xs">Nova Verificação</button>
                 </div>
             );
         }
