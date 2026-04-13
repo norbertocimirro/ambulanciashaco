@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HACO - OPS CENTER SAE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -11,11 +11,13 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .glass { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.05); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .btn-neon:active { transform: scale(0.95); opacity: 0.8; }
+        .neon-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); border-color: #ef4444 !important; }
+        .neon-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); border-color: #10b981 !important; }
+        input:focus { border-color: #ef4444 !important; outline: none; }
     </style>
 </head>
 <body>
@@ -24,41 +26,54 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // ⚠️ COLOQUE SUA URL AQUI ⚠️
         const API_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec"; 
 
         const VIATURAS = [
-            { id: 'basica', label: 'Básica (USB)', color: 'cyan', bg: 'bg-cyan-500', text: 'text-cyan-400' },
-            { id: 'avancada', label: 'Avançada (USA)', color: 'rose', bg: 'bg-rose-500', text: 'text-rose-400' },
-            { id: 'paje', label: 'PAJÉ (Tático)', color: 'emerald', bg: 'bg-emerald-500', text: 'text-emerald-400' },
-            { id: 'missoes', label: 'Missões (EVAM)', color: 'amber', bg: 'bg-amber-500', text: 'text-amber-400' }
+            { id: 'basica', label: 'Básica (USB)', color: 'blue' },
+            { id: 'avancada', label: 'Avançada (USA)', color: 'rose' },
+            { id: 'paje', label: 'PAJÉ (Tático)', color: 'emerald' },
+            { id: 'missoes', label: 'Missões (EVAM)', color: 'amber' }
         ];
 
-        const ITENS = [
-            { id: 'dea', n: 'DEA / Cardioversor', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+        const CHECKLIST_SAMU = [
+            // EQUIPAMENTOS CRÍTICOS
+            { id: 'dea', n: 'DEA (Desfibrilador)', cat: 'Equipamentos', types: ['basica', 'paje'] },
             { id: 'monitor', n: 'Monitor Multiparâmetros', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
             { id: 'vent', n: 'Ventilador Mecânico', cat: 'Equipamentos', types: ['avancada', 'missoes'] },
+            { id: 'ox', n: 'Cilindro O2 / Fluxômetro', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
             { id: 'oximetro', n: 'Oxímetro de Pulso', cat: 'Equipamentos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            
+            // VIAS AÉREAS
             { id: 'laringo', n: 'Laringoscópio Completo', cat: 'Vias Aéreas', types: ['avancada', 'missoes'] },
             { id: 'ambu', n: 'AMBU c/ Reservatório', cat: 'Vias Aéreas', types: ['basica', 'avancada', 'paje', 'missoes'] },
-            { id: 'tubos', n: 'Tubos / Guia / Cânulas', cat: 'Vias Aéreas', types: ['avancada', 'missoes'] }
+            { id: 'tubos', n: 'Tubos / Guia / Cânulas', cat: 'Vias Aéreas', types: ['avancada', 'missoes'] },
+            { id: 'aspirador', n: 'Aspirador de Secreção', cat: 'Vias Aéreas', types: ['basica', 'avancada', 'paje', 'missoes'] },
+
+            // INSUMOS
+            { id: 'acesso', n: 'Kit Acesso Venoso', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'soro', n: 'Soros (FIS/RINGER)', cat: 'Insumos', types: ['basica', 'avancada', 'paje', 'missoes'] },
+            { id: 'medic', n: 'Maleta Medicamentos', cat: 'Insumos', types: ['avancada', 'missoes'] }
         ];
 
+        const CATEGORIES = ["Militar", "Equipamentos", "Vias Aéreas", "Insumos", "Finalizar"];
+
         function App() {
-            const [view, setView] = useState('menu'); 
-            const [tab, setTab] = useState('monitor');
+            const [view, setView] = useState('menu'); // menu, form, admin
             const [vSel, setVSel] = useState(null);
             const [step, setStep] = useState(0);
             const [db, setDb] = useState([]);
-            const [loading, setLoading] = useState(false);
             const [form, setForm] = useState({ placa: '', posto: '', guerra: '', items: {} });
+            const [loading, setLoading] = useState(false);
 
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step, db, tab]);
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step, db]);
 
+            // --- LÓGICA DE AUDITORIA ---
             const audit = useMemo(() => {
-                if (!db.length) return { op: 0, shifts: {}, alerts: [], hist: [] };
+                if (!db.length) return { op: 0, shifts: {}, alerts: [], history: [] };
                 const today = new Date().toLocaleDateString('pt-BR');
+                const conforme = db.filter(d => d[5] === 'C').length;
                 const nc = db.filter(d => d[5] === 'NC').map(d => ({ ts: d[0], v: d[1], p: d[2], r: d[3], i: d[4], o: d[6] })).reverse();
+                
                 const shifts = {};
                 VIATURAS.forEach(v => {
                     const logs = db.filter(d => d[1] === v.label && d[0].includes(today));
@@ -72,12 +87,13 @@
                     };
                     shifts[v.label] = { M: check(7, 13), T: check(13, 19), N: check(19, 24) || check(0, 7) };
                 });
-                return { op: Math.round((db.filter(d => d[5] === 'C').length / db.length) * 100), shifts, alerts: nc.slice(0, 6), hist: db };
+                return { op: Math.round((conforme / db.length) * 100), shifts, alerts: nc.slice(0, 10), history: [...db].reverse() };
             }, [db]);
 
+            // --- AÇÕES ---
             const startCheck = (v) => {
                 const items = {};
-                ITENS.filter(i => i.types.includes(v.id)).forEach(i => items[i.id] = { status: 'C', obs: '' });
+                CHECKLIST_SAMU.filter(i => i.types.includes(v.id)).forEach(i => items[i.id] = { status: 'C', obs: '' });
                 setForm({ placa: '', posto: '', guerra: '', items });
                 setVSel(v);
                 setStep(0);
@@ -89,11 +105,12 @@
                 setLoading(true);
                 const payload = {
                     action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`,
-                    items: Object.entries(form.items).map(([id, val]) => ({ nome: ITENS.find(i => i.id === id).n, status: val.status, obs: val.obs }))
+                    items: Object.entries(form.items).map(([id, val]) => ({ nome: CHECKLIST_SAMU.find(i => i.id === id).n, status: val.status, obs: val.obs }))
                 };
                 try {
                     await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                    setView('success');
+                    alert("GRAVAÇÃO CONCLUÍDA!");
+                    setView('menu');
                 } catch (e) { alert("Erro de Rede."); }
                 setLoading(false);
             };
@@ -103,172 +120,164 @@
                 try {
                     const r = await fetch(`${API_URL}?action=read&t=${Date.now()}`);
                     setDb(await r.json());
-                    setView('dash');
-                } catch (e) { alert("Falha na sincronização."); }
+                    setView('admin');
+                } catch (e) { alert("Falha ao sincronizar."); }
                 setLoading(false);
             };
 
+            // --- VIEW: MENU INICIAL ---
             if (view === 'menu') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade">
-                    <div className="text-center space-y-4">
-                        <div className="bg-red-600 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl mb-6"><i data-lucide="cross" className="text-white"></i></div>
-                        <h1 className="text-6xl font-black italic tracking-tighter uppercase">HACO <span className="text-red-600">SAE</span></h1>
-                        <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-[10px]">Gestão de Prontidão</p>
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-8 animate-fade">
+                    <div className="text-center space-y-2">
+                        <div className="bg-red-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-2xl mb-4"><i data-lucide="cross" className="text-white w-8 h-8"></i></div>
+                        <h1 className="text-5xl font-black italic uppercase">HACO <span className="text-red-600">SAE</span></h1>
+                        <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px]">Coleta de Dados SAMU</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-6 max-w-lg w-full">
+                    <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
                         {VIATURAS.map(v => (
-                            <button key={v.id} onClick={() => startCheck(v)} className="glass p-8 rounded-[2.5rem] flex flex-col items-center gap-4 hover:border-emerald-500 transition-all btn-neon">
-                                <div className={`${v.bg} p-5 rounded-2xl shadow-lg`}><i data-lucide="truck" className="text-white"></i></div>
-                                <span className="font-black text-slate-400 uppercase text-[10px] tracking-widest">{v.label}</span>
+                            <button key={v.id} onClick={() => startCheck(v)} className="glass p-6 rounded-3xl flex items-center gap-6 active:scale-95 transition-all border-l-8 border-rose-600">
+                                <div className="bg-slate-800 p-4 rounded-xl"><i data-lucide="truck" className="text-white"></i></div>
+                                <span className="font-black text-white uppercase text-sm tracking-widest">{v.label}</span>
                             </button>
                         ))}
                     </div>
-                    <button onClick={sync} className="w-full max-w-xs py-6 text-slate-600 font-black uppercase text-[10px] border-t border-white/5 mt-10 hover:text-red-500 transition-all italic">Acesso Oficial Gestor</button>
+                    <button onClick={sync} className="text-slate-600 font-black uppercase text-[10px] tracking-widest pt-10 border-t border-white/5 w-full max-w-xs italic">Acesso Gestor (Desktop)</button>
                 </div>
             );
 
-            if (view === 'dash') return (
-                <div className="min-h-screen flex animate-fade">
-                    <aside className="w-20 bg-slate-900 border-r border-white/5 flex flex-col items-center py-10 gap-8">
-                        <div className="bg-red-600 p-3 rounded-xl shadow-lg"><i data-lucide="shield-check" className="text-white w-5 h-5"></i></div>
-                        <button onClick={() => setTab('monitor')} className={`p-4 rounded-xl ${tab === 'monitor' ? 'bg-red-600 text-white' : 'text-slate-600'}`}><i data-lucide="layout-dashboard"></i></button>
-                        <button onClick={() => setTab('report')} className={`p-4 rounded-xl ${tab === 'report' ? 'bg-red-600 text-white' : 'text-slate-600'}`}><i data-lucide="file-text"></i></button>
-                        <button onClick={sync} className="p-4 text-slate-600 hover:text-white"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i></button>
-                        <button onClick={() => setView('menu')} className="mt-auto p-4 text-slate-700 hover:text-red-500"><i data-lucide="log-out"></i></button>
-                    </aside>
-                    <main className="flex-1 p-10 overflow-y-auto space-y-12">
-                        {tab === 'monitor' ? (
-                            <>
-                                <header className="flex justify-between items-end border-b border-white/5 pb-8">
-                                    <div><h1 className="text-7xl font-black tracking-tighter uppercase italic leading-none">FROTA <span className="text-red-600">SAE</span></h1><p className="text-slate-500 font-mono text-[10px] uppercase mt-4 tracking-[0.3em]">Hospital de Aeronáutica de Canoas</p></div>
-                                    <div className="glass p-10 rounded-[3rem] text-center min-w-[220px] border-t-4 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                                        <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.op}%</span>
-                                        <p className="text-[10px] font-black text-slate-500 mt-4 tracking-widest uppercase">Operacionalidade</p>
-                                    </div>
-                                </header>
-                                <div className="grid grid-cols-4 gap-6">
-                                    {VIATURAS.map(v => (
-                                        <div key={v.id} className="glass p-8 rounded-[2.5rem] relative overflow-hidden">
-                                            <div className={`absolute top-0 left-0 w-full h-1 ${v.bg}`}></div>
-                                            <h4 className={`text-[10px] font-black ${v.text} uppercase tracking-widest mb-8 border-b border-white/5 pb-4`}>{v.label}</h4>
-                                            <div className="space-y-6">
-                                                {['MANHÃ', 'TARDE', 'NOITE'].map(s => {
-                                                    const log = audit.shifts[v.label][s[0]];
-                                                    return (
-                                                        <div key={s} className="flex justify-between items-start">
-                                                            <div><span className="block text-[9px] font-black text-slate-600 uppercase mb-1">{s}</span>{log?.ok && <span className="text-[11px] font-bold text-white uppercase italic underline decoration-red-600">{log.u}</span>}</div>
-                                                            <span className={`px-3 py-1 rounded text-[9px] font-black border ${log?.ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'}`}>{log?.ok ? 'OK' : 'PEND'}</span>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="glass p-10 rounded-[3.5rem] border border-red-900/30">
-                                    <h3 className="text-[11px] font-black uppercase text-red-500 tracking-[0.5em] mb-10 flex items-center gap-4 italic"><i data-lucide="alert-octagon"></i> Alertas Críticos</h3>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        {audit.alerts.map((a, i) => (
-                                            <div key={i} className="flex justify-between items-center p-6 bg-slate-950/50 rounded-3xl border border-white/5">
-                                                <div className="flex items-center gap-5 italic uppercase">
-                                                    <div className="bg-red-600/20 text-red-500 p-4 rounded-2xl shadow-inner"><i data-lucide="activity"></i></div>
-                                                    <div><p className="text-lg font-black leading-none">{a.i}</p><p className="text-[10px] text-red-500 mt-2">{a.o || "Material Faltante"}</p></div>
-                                                </div>
-                                                <div className="text-right font-mono"><p className="text-xs font-black text-slate-400">{a.r}</p><p className="text-[10px] text-slate-600 mt-1">{a.p}</p></div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="space-y-10 animate-fade">
-                                <h1 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">Relatórios <span className="text-red-600 underline">Auditoria</span></h1>
-                                <div className="grid grid-cols-1 gap-4">
-                                    {audit.hist.slice(0, 40).map((r, i) => (
-                                        <div key={i} className="glass p-5 rounded-2xl flex justify-between items-center border border-white/5 hover:bg-white/5 transition-all text-[11px]">
-                                            <div className="flex gap-6 items-center">
-                                                <span className="text-slate-600 font-mono">{r[0]}</span>
-                                                <span className="font-black text-white italic min-w-[120px]">{r[1]}</span>
-                                                <span className="text-red-500 font-bold uppercase">{r[3]}</span>
-                                            </div>
-                                            <div className="flex gap-10 items-center">
-                                                <span className="text-slate-300 font-black uppercase italic">{r[4]}</span>
-                                                <span className={`font-black ${r[5] === 'C' ? 'text-emerald-500' : 'text-red-500 underline'}`}>{r[5]}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </main>
-                </div>
-            );
-
+            // --- VIEW: FORMULÁRIO MOBILE ---
             if (view === 'form') {
-                const cats = ['Identificação', 'Equipamentos', 'Vias Aéreas', 'Finalizar'];
-                const items = ITENS.filter(i => i.types.includes(vSel.id) && i.cat === cats[step]);
+                const currentCat = CATEGORIES[step];
+                const items = CHECKLIST_SAMU.filter(i => i.types.includes(vSel.id) && i.cat === currentCat);
 
                 return (
-                    <div className="min-h-screen flex flex-col pb-44 animate-fade">
-                        <header className={`sticky top-0 z-50 ${vSel.bg} text-white p-8 shadow-2xl flex justify-between items-center rounded-b-[4rem]`}>
-                            <button onClick={() => setView('menu')} className="bg-white/20 p-3 rounded-2xl"><i data-lucide="chevron-left"></i></button>
-                            <h1 className="font-black text-3xl italic uppercase tracking-tighter">{vSel.label}</h1>
-                            <div className="bg-black/20 px-5 py-2.5 rounded-2xl font-mono text-xs font-black">{step + 1} / {cats.length}</div>
+                    <div className="min-h-screen flex flex-col bg-slate-950 pb-32">
+                        <header className="p-6 glass flex justify-between items-center sticky top-0 z-50 rounded-b-3xl">
+                            <button onClick={() => setView('menu')} className="bg-white/10 p-2 rounded-lg"><i data-lucide="chevron-left"></i></button>
+                            <h1 className="font-black uppercase italic text-sm tracking-widest">{vSel.label}</h1>
+                            <span className="font-mono text-xs font-black bg-red-600 px-2 py-1 rounded">{step + 1}/{CATEGORIES.length}</span>
                         </header>
 
-                        <main className="max-w-2xl mx-auto w-full p-6 pt-12 space-y-8">
-                            {step === 0 && (
-                                <div className="glass p-12 rounded-[4rem] space-y-12 border border-white/10">
-                                    <div className="text-center italic"><h2 className="text-3xl font-black text-white uppercase leading-none">Militar</h2><p className="text-slate-500 font-bold uppercase text-[10px] mt-4">Protocolo SAE Obrigatório</p></div>
-                                    <div className="space-y-8">
-                                        <input type="text" placeholder="PLACA DA VIATURA" className="w-full p-8 rounded-[2.5rem] bg-black/40 border-2 border-transparent focus:border-emerald-500 outline-none font-black text-4xl text-center uppercase text-white shadow-inner transition-all" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <input type="text" placeholder="POSTO (EX: 1T)" className="w-full p-6 rounded-3xl bg-black/40 border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-center text-white uppercase" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
-                                            <input type="text" placeholder="GUERRA" className="w-full p-6 rounded-3xl bg-black/40 border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-center text-white uppercase" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
-                                        </div>
+                        <main className="p-4 space-y-6 flex-1 overflow-y-auto animate-fade">
+                            <h2 className="text-2xl font-black uppercase text-red-500 italic px-2">{currentCat}</h2>
+                            
+                            {currentCat === 'Militar' && (
+                                <div className="space-y-4 glass p-6 rounded-[2rem]">
+                                    <input type="text" placeholder="PLACA" className="w-full p-5 bg-black/40 border border-white/10 rounded-2xl font-black text-center text-2xl uppercase" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input type="text" placeholder="POSTO" className="w-full p-4 bg-black/40 border border-white/10 rounded-2xl font-bold text-center uppercase" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="GUERRA" className="w-full p-4 bg-black/40 border border-white/10 rounded-2xl font-bold text-center uppercase" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
                                     </div>
                                 </div>
                             )}
 
                             {items.map(i => (
-                                <div key={i.id} className="glass p-10 rounded-[3.5rem] border border-white/5 animate-fade">
-                                    <div className="flex justify-between items-center mb-10">
-                                        <span className="font-black text-white text-2xl uppercase italic pr-6 leading-tight">{i.n}</span>
-                                        <div className="flex bg-black/40 p-2 rounded-2xl border border-white/5">
-                                            <button onClick={() => setForm({...form, items: {...form.items, [i.id]: {status: 'C', obs: form.items[i.id]?.obs || ''}}})} className={`px-10 py-5 rounded-xl text-xs font-black transition-all ${form.items[i.id]?.status === 'C' ? 'bg-emerald-500 text-white shadow-xl scale-110' : 'text-slate-600'}`}>C</button>
-                                            <button onClick={() => setForm({...form, items: {...form.items, [i.id]: {status: 'NC', obs: form.items[i.id]?.obs || ''}}})} className={`px-10 py-5 rounded-xl text-xs font-black transition-all ${form.items[i.id]?.status === 'NC' ? 'bg-red-600 text-white shadow-xl scale-110' : 'text-slate-600'}`}>NC</button>
+                                <div key={i.id} className="glass p-5 rounded-[2rem] space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-black text-sm uppercase tracking-tight max-w-[60%]">{i.n}</span>
+                                        <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                                            <button onClick={() => setForm({...form, items: {...form.items, [i.id]: {status: 'C', obs: form.items[i.id].obs}}})} className={`px-4 py-2 rounded-lg font-black text-xs transition-all ${form.items[i.id].status === 'C' ? 'bg-emerald-600 text-white' : 'text-slate-600'}`}>C</button>
+                                            <button onClick={() => setForm({...form, items: {...form.items, [i.id]: {status: 'NC', obs: form.items[i.id].obs}}})} className={`px-4 py-2 rounded-lg font-black text-xs transition-all ${form.items[i.id].status === 'NC' ? 'bg-red-600 text-white' : 'text-slate-600'}`}>NC</button>
                                         </div>
                                     </div>
-                                    <input type="text" placeholder="Observação técnica SAE..." className={`w-full p-6 text-xs rounded-[2rem] bg-black/40 border-none outline-none focus:ring-4 focus:ring-emerald-500/20 text-slate-300 ${form.items[i.id]?.status === 'NC' ? 'border border-red-900 text-red-400 font-bold bg-red-950/20' : ''}`} value={form.items[i.id]?.obs || ''} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
+                                    <input type="text" placeholder="Obs..." className={`w-full p-3 bg-black/20 rounded-xl text-xs ${form.items[i.id].status === 'NC' ? 'border border-red-500/50' : 'border-transparent'}`} value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
                                 </div>
                             ))}
 
-                            {step === 3 && (
-                                <div className="bg-red-600 text-white p-14 rounded-[5rem] text-center shadow-2xl space-y-12 border-t-8 border-red-700 animate-fade">
-                                    <i data-lucide="send" className="w-12 h-12 mx-auto animate-pulse"></i>
-                                    <h2 className="text-5xl font-black italic uppercase leading-none">CONCLUIR<br/>AUDITORIA</h2>
-                                    <button onClick={send} disabled={loading} className="w-full bg-slate-950 text-white font-black py-9 rounded-[3rem] shadow-2xl uppercase text-[12px] active:scale-95 transition-all">
-                                        {loading ? 'TRANSMITINDO...' : 'EXECUTAR GRAVAÇÃO'}
+                            {currentCat === 'Finalizar' && (
+                                <div className="text-center space-y-6 glass p-8 rounded-[3rem]">
+                                    <div className="bg-red-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto animate-pulse"><i data-lucide="send" className="text-white"></i></div>
+                                    <h3 className="font-black uppercase text-xl">Concluir Protocolo</h3>
+                                    <button onClick={send} disabled={loading} className="w-full bg-white text-black font-black py-6 rounded-2xl shadow-2xl active:scale-95 transition-all">
+                                        {loading ? 'ENVIANDO...' : 'EXECUTAR GRAVAÇÃO'}
                                     </button>
                                 </div>
                             )}
                         </main>
 
-                        <footer className="fixed bottom-0 left-0 right-0 p-10 bg-slate-950/90 border-t border-white/5 flex gap-8 z-50 rounded-t-[5rem] shadow-2xl">
-                            <div className="max-w-2xl mx-auto w-full flex gap-6">
-                                {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-white/5 border-2 border-white/10 text-slate-400 font-black py-8 rounded-[2.5rem] uppercase text-[10px] italic transition-all">Anterior</button>}
-                                {step < 3 && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-slate-900 text-white font-black py-8 rounded-[2.5rem] shadow-2xl uppercase text-[10px] tracking-widest italic border border-white/10 active:scale-95 transition-all">Próximo Passo</button>}
-                            </div>
+                        <footer className="fixed bottom-0 left-0 right-0 p-6 glass border-t border-white/5 flex gap-4 bg-slate-950/90">
+                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-white/5 p-5 rounded-2xl font-black uppercase text-xs">Voltar</button>}
+                            {step < CATEGORIES.length - 1 && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-red-600 p-5 rounded-2xl font-black uppercase text-xs shadow-lg">Próximo</button>}
                         </footer>
                     </div>
                 );
             }
 
-            if (view === 'success') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-950 text-center animate-fade">
-                    <div className="w-24 h-24 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-10 animate-bounce border border-emerald-500/30"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
-                    <h1 className="text-5xl font-black italic text-white uppercase tracking-tighter leading-none mb-12">MISSÃO<br/>CUMPRIDA</h1>
-                    <button onClick={resetApp} className="w-full max-w-xs bg-white text-black font-black py-7 rounded-[2rem] shadow-2xl uppercase tracking-widest text-[11px] active:scale-95 transition-all">Nova Verificação</button>
+            // --- VIEW: DASHBOARD DESKTOP/TV ---
+            if (view === 'admin') return (
+                <div className="min-h-screen flex animate-fade">
+                    <aside className="w-20 bg-slate-900 border-r border-white/5 flex flex-col items-center py-10 gap-8">
+                        <div className="bg-red-600 p-3 rounded-xl shadow-lg"><i data-lucide="shield-check" className="text-white w-6 h-6"></i></div>
+                        <button onClick={sync} className="p-4 text-slate-500 hover:text-white transition-all"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i></button>
+                        <button onClick={() => setView('menu')} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-all"><i data-lucide="log-out"></i></button>
+                    </aside>
+
+                    <main className="flex-1 p-10 overflow-y-auto space-y-12 bg-[#020617]">
+                        <header className="flex justify-between items-end border-b border-white/5 pb-8">
+                            <div>
+                                <h1 className="text-7xl font-black tracking-tighter uppercase italic leading-none">STATUS <span className="text-red-600">SAE</span></h1>
+                                <p className="text-slate-500 font-mono text-[10px] uppercase mt-4 tracking-[0.5em]">OPS CENTER - HOSPITAL DE AERONÁUTICA DE CANOAS</p>
+                            </div>
+                            <div className="glass p-10 rounded-[3rem] text-center min-w-[220px] neon-green">
+                                <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.op}%</span>
+                                <p className="text-[10px] font-black text-slate-500 mt-4 tracking-widest uppercase italic">Conformidade Frota</p>
+                            </div>
+                        </header>
+
+                        <div className="grid grid-cols-4 gap-6">
+                            {VIATURAS.map(v => (
+                                <div key={v.id} className="glass p-8 rounded-[2.5rem] relative overflow-hidden">
+                                    <div className={`absolute top-0 left-0 w-full h-1.5 bg-${v.color}-500 shadow-xl`}></div>
+                                    <h4 className="text-[10px] font-black text-white uppercase tracking-widest mb-10 border-b border-white/5 pb-4 italic">{v.label}</h4>
+                                    <div className="space-y-8">
+                                        {['MANHÃ', 'TARDE', 'NOITE'].map(s => {
+                                            const log = audit.shifts[v.label][s[0]];
+                                            return (
+                                                <div key={s} className="flex justify-between items-start">
+                                                    <div>
+                                                        <span className="block text-[9px] font-black text-slate-600 uppercase mb-1">{s}</span>
+                                                        {log?.ok && <span className="text-[11px] font-bold text-white uppercase italic underline decoration-red-600">{log.u}</span>}
+                                                    </div>
+                                                    <span className={`px-3 py-1 rounded text-[9px] font-black border ${log?.ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'}`}>{log?.ok ? 'OK' : 'PEND'}</span>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-8">
+                            <div className="col-span-2 glass p-10 rounded-[3.5rem] neon-red">
+                                <h3 className="text-[11px] font-black uppercase text-red-500 tracking-[0.5em] mb-10 flex items-center gap-4 italic"><i data-lucide="alert-octagon" className="animate-pulse"></i> ALERTAS DE FALHA EM EQUIPAMENTOS</h3>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {audit.alerts.map((a, i) => (
+                                        <div key={i} className="flex justify-between items-center p-6 bg-slate-950/50 rounded-2xl border border-white/5">
+                                            <div className="flex items-center gap-6 italic uppercase">
+                                                <div className="bg-red-600/20 text-red-500 p-4 rounded-xl"><i data-lucide="activity"></i></div>
+                                                <div><p className="text-lg font-black leading-none">{a.i}</p><p className="text-xs text-red-500 mt-2">{a.o || "Material Faltante / Inoperante"}</p></div>
+                                            </div>
+                                            <div className="text-right font-mono"><p className="text-xs font-black text-slate-400">{a.r}</p><p className="text-[10px] text-slate-600 mt-1">{a.p}</p></div>
+                                        </div>
+                                    ))}
+                                    {audit.alerts.length === 0 && <div className="text-center py-10 opacity-20 font-black uppercase tracking-[0.5em]">100% OPERACIONAL</div>}
+                                </div>
+                            </div>
+                            
+                            <div className="glass p-10 rounded-[3.5rem] overflow-hidden">
+                                <h3 className="text-[11px] font-black uppercase text-slate-500 tracking-[0.5em] mb-10 italic">ÚLTIMOS CHECKS</h3>
+                                <div className="space-y-6 overflow-y-auto max-h-[500px] no-scrollbar">
+                                    {audit.history.slice(0, 10).map((h, i) => (
+                                        <div key={i} className="border-l-2 border-white/10 pl-6 space-y-1">
+                                            <p className="text-[10px] font-mono text-slate-600">{h[0]}</p>
+                                            <p className="text-[11px] font-black uppercase">{h[3]}</p>
+                                            <p className="text-[9px] font-bold text-red-500 italic">{h[1]} - {h[2]}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </main>
                 </div>
             );
         }
