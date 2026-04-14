@@ -187,8 +187,26 @@
                 setView('form');
             };
 
-            const send = async () => {
-                if(!form.placa || !form.posto || !form.guerra) return alert("ERRO: Identificação Militar é obrigatória.");
+const send = async () => {
+                if(!form.placa || !form.posto || !form.guerra) {
+                    return alert("ERRO TÁTICO: Identificação Militar é obrigatória.");
+                }
+
+                // 1. Array com os status críticos que exigem justificativa
+                const statusCriticos = ['FA', 'FALTA', 'FALTA (Anotar)', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA'];
+                
+                // 2. Varredura: Procura itens com falha e caixa de texto vazia
+                const itemSemJustificativa = Object.entries(form.items).find(([id, val]) => {
+                    return statusCriticos.includes(val.status) && val.obs.trim() === '';
+                });
+
+                // 3. A Trava: Bloqueia o envio se encontrar a inconsistência
+                if (itemSemJustificativa) {
+                    const idDoItemFalho = itemSemJustificativa[0];
+                    const nomeDoItem = CHECKLIST.find(i => i.id === idDoItemFalho).n;
+                    return alert(`BLOQUEIO DE AUDITORIA:\n\nO item "${nomeDoItem}" foi marcado como irregular (${itemSemJustificativa[1].status}).\n\nÉ OBRIGATÓRIO digitar o motivo, a numeração ou a peça faltante na caixa de observação antes de transmitir.`);
+                }
+
                 setLoading(true);
                 const payload = {
                     action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`, obsGerais: form.obs,
@@ -197,7 +215,7 @@
                 try {
                     await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                     setView('sucesso');
-                } catch (e) { alert("Erro de Conexão com o Servidor."); }
+                } catch (e) { alert("Erro de Conexão com o Servidor HACO."); }
                 setLoading(false);
             };
 
