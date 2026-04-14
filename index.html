@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - VERIFICAÇÃO DE AMBULÂNCIAS</title>
+    <title>HACO - OPS CENTER SAE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -38,7 +38,6 @@
 
         // MATRIZ COMPLETA SAMU CANOAS (11 PÁGINAS INTEGRAIS)
         const CHECKLIST = [
-            // --- PASSO 0: PÁG 1 e 2 (Admin e VA) ---
             { id: 'smart', n: 'Rádio Comunicador', cat: 0, opts: ['OK', 'FA'] },
             { id: 'carimbo', n: 'Carimbo da Viatura', cat: 0, opts: ['OK', 'FA'] },
             { id: 'bolsa_va', n: 'Bolsa de Via Aérea', cat: 0, opts: ['OK', 'FA', 'N/A'] },
@@ -49,8 +48,6 @@
             { id: 'seringa20', n: 'Seringa 20ml (2 un)', cat: 0, opts: ['OK', 'FA'] },
             { id: 'ext_o2_va', n: 'Extensor de O2 (1 un)', cat: 0, opts: ['OK', 'FA'] },
             { id: 'guedel', n: 'Cânulas Guedel (0, 1, 2, 3, 4, 5)', cat: 0, opts: ['TODAS COMPLETAS', 'FALTA (Anotar)'] },
-
-            // --- PASSO 1: PÁG 3, 4, 5, 6 e 7 (Mochila Vermelha - Sinais, Bolsos e Interno) ---
             { id: 'esteto', n: 'Estetoscópio', cat: 1, opts: ['OK', 'FA'] },
             { id: 'esfig_ad', n: 'Esfigmomanômetro Adulto', cat: 1, opts: ['OK', 'FA'] },
             { id: 'esfig_ped', n: 'Esfigmomanômetro Pediátrico', cat: 1, opts: ['OK', 'FA'] },
@@ -77,16 +74,12 @@
             { id: 'sf_int', n: 'Kit Soro Fisiológico (1 un)', cat: 1, opts: ['OK', 'FA'] },
             { id: 'rl_int', n: 'Kit Ringer Lactato (1 un)', cat: 1, opts: ['OK', 'FA'] },
             { id: 'torniquete', n: 'Torniquete (1 un)', cat: 1, opts: ['OK', 'FA'] },
-
-            // --- PASSO 2: PÁG 7 continuação (Medicação e DEA) ---
             { id: 'med_geral', n: 'Medicação Geral', cat: 2, opts: ['COMPLETA', 'INCOMPLETA', 'FA'] },
             { id: 'med_ctrl', n: 'Medicações Controladas', cat: 2, opts: ['COMPLETA C/ LACRE', 'COMPLETA S/ LACRE', 'INCOMPLETA', 'FA'] },
             { id: 'dea_status', n: 'DEA', cat: 2, opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
             { id: 'dea_pas_ad', n: 'Pás Adulto (DEA)', cat: 2, opts: ['OK', 'FA'] },
             { id: 'dea_pas_ped', n: 'Pás Pediátricas (DEA)', cat: 2, opts: ['OK', 'FA'] },
             { id: 'dea_pilhas', n: 'Pilhas (DEA)', cat: 2, opts: ['OK', 'FA'] },
-
-            // --- PASSO 3: PÁG 8 (Diversos, O2 e Trauma) ---
             { id: 'o2_g_t1', n: 'O2 Grande - Torpedo 1', cat: 3, opts: ['LACRADO', 'MC > 20', 'NECESSÁRIO TROCA', 'FALTA'] },
             { id: 'o2_g_t2', n: 'O2 Grande - Torpedo 2', cat: 3, opts: ['LACRADO', 'MC > 20', 'NECESSÁRIO TROCA', 'FALTA'] },
             { id: 'o2_p_t1', n: 'O2 Portátil - Torpedo 1', cat: 3, opts: ['LACRADO', 'MC > 40', 'NECESSÁRIO TROCA', 'FALTA'] },
@@ -102,8 +95,6 @@
             { id: 'colchao_ret', n: 'Colchão Maca Retrátil', cat: 3, opts: ['OK', 'FA'] },
             { id: 'colchao_res', n: 'Colchão Reserva', cat: 3, opts: ['OK', 'EM USO', 'FA'] },
             { id: 'cones', n: 'Cones de Sinalização', cat: 3, opts: ['COMPLETOS (5)', 'FALTA (Anotar)'] },
-
-            // --- PASSO 4: PÁG 9, 10 e 11 (Parede e Armários) ---
             { id: 'fluxo_parede', n: 'Fluxômetro Parede', cat: 4, opts: ['1', '2', 'FA'] },
             { id: 'masc_hud_ad', n: 'Masc Hudson/Extensor ADULTO (2 de cada)', cat: 4, opts: ['OK', 'FA'] },
             { id: 'masc_hud_ped', n: 'Masc Hudson/Extensor PEDIÁTRICO (2 de cada)', cat: 4, opts: ['OK', 'FA'] },
@@ -149,9 +140,8 @@
                 const historyMap = db.reduce((acc, d) => {
                     if(d[4] === 'INFO') return acc;
                     const k = `${d[0]}_${d[2]}`;
-                    if (!acc[k]) acc[k] = { ts: d[0], v: d[1], p: d[2], r: d[3], alertas: [] }; // Guarda a lista de alertas
+                    if (!acc[k]) acc[k] = { ts: d[0], v: d[1], p: d[2], r: d[3], alertas: [] };
                     if (falhas.includes(d[5])) {
-                        // Salva o detalhe exato da Não Conformidade
                         acc[k].alertas.push({ nome: d[4], status: d[5], obs: d[6] || '' }); 
                     }
                     return acc;
@@ -190,20 +180,17 @@
                 setView('form');
             };
 
-const send = async () => {
+            const send = async () => {
                 if(!form.placa || !form.posto || !form.guerra) {
                     return alert("ERRO TÁTICO: Identificação Militar é obrigatória.");
                 }
 
-                // 1. Array com os status críticos que exigem justificativa
+                // TRAVA DE AUDITORIA
                 const statusCriticos = ['FA', 'FALTA', 'FALTA (Anotar)', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA'];
-                
-                // 2. Varredura: Procura itens com falha e caixa de texto vazia
                 const itemSemJustificativa = Object.entries(form.items).find(([id, val]) => {
                     return statusCriticos.includes(val.status) && val.obs.trim() === '';
                 });
 
-                // 3. A Trava: Bloqueia o envio se encontrar a inconsistência
                 if (itemSemJustificativa) {
                     const idDoItemFalho = itemSemJustificativa[0];
                     const nomeDoItem = CHECKLIST.find(i => i.id === idDoItemFalho).n;
@@ -381,7 +368,7 @@ const send = async () => {
                                 </div>
                             </>
                         ) : (
-                          <div className="space-y-12 animate-fade">
+                            <div className="space-y-12 animate-fade">
                                 <h1 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">Relatório <span className="text-red-600 underline">Geral</span></h1>
                                 <div className="grid grid-cols-1 gap-6">
                                     {audit.history.map((h, i) => (
@@ -404,7 +391,7 @@ const send = async () => {
                                                 </div>
                                             </div>
 
-                                            {/* Área de Detalhamento das Falhas (Só aparece se houver alertas) */}
+                                            {/* Área de Detalhamento das Falhas */}
                                             {h.alertas.length > 0 && (
                                                 <div className="pt-5 border-t border-white/5 grid grid-cols-2 gap-4">
                                                     {h.alertas.map((alerta, idx) => (
@@ -425,6 +412,10 @@ const send = async () => {
                                     ))}
                                 </div>
                             </div>
+                        )}
+                    </main>
+                </div>
+            );
 
             if (view === 'sucesso') return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-950 text-center animate-fade">
