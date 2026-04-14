@@ -227,7 +227,7 @@
                             </button>
                         ))}
                     </div>
-                    <button onClick={sync} className="text-slate-600 font-black uppercase text-[10px] tracking-widest pt-10 border-t border-white/10 w-full max-w-xs transition-colors hover:text-red-500">Ops Center (TV/Desktop)</button>
+                    <button onClick={sync} className="text-slate-600 font-black uppercase text-[10px] tracking-widest pt-10 border-t border-white/10 w-full max-w-xs transition-colors hover:text-red-500">Administração</button>
                 </div>
             );
 
@@ -316,7 +316,7 @@
                         {tab === 'monitor' ? (
                             <>
                                 <header className="flex justify-between items-end border-b border-white/5 pb-10">
-                                    <div><h1 className="text-8xl font-black tracking-tighter uppercase italic text-white leading-none">Controle <span className="text-red-600">Ambulâncias</span></h1><p className="text-slate-500 font-mono text-sm uppercase mt-4 tracking-[0.5em]">Ops Center - Auditoria SAMU Canoas</p></div>
+                                    <div><h1 className="text-8xl font-black tracking-tighter uppercase italic text-white leading-none">Controle de <span className="text-red-600">Ambulâncias</span></h1><p className="text-slate-500 font-mono text-sm uppercase mt-4 tracking-[0.5em]">Checklist Geral</p></div>
                                     <div className="glass p-12 rounded-[3rem] text-center min-w-[280px] border-t-8 border-emerald-500">
                                         <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.op}%</span>
                                         <p className="text-xs font-black text-slate-500 mt-4 tracking-widest uppercase italic">Conformidade Operacional</p>
@@ -361,7 +361,7 @@
                             </>
                         ) : (
                             <div className="space-y-12 animate-fade">
-                                <h1 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">Relatório <span className="text-red-600 underline">Auditoria</span></h1>
+                                <h1 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">Relatório <span className="text-red-600 underline">Geral</span></h1>
                                 <div className="grid grid-cols-1 gap-6">
                                     {audit.history.map((h, i) => (
                                         <div key={i} className="glass p-8 rounded-3xl flex justify-between items-center border border-white/5 hover:bg-white/5 transition-all">
