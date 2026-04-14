@@ -149,8 +149,11 @@
                 const historyMap = db.reduce((acc, d) => {
                     if(d[4] === 'INFO') return acc;
                     const k = `${d[0]}_${d[2]}`;
-                    if (!acc[k]) acc[k] = { ts: d[0], v: d[1], p: d[2], r: d[3], errs: 0 };
-                    if (falhas.includes(d[5])) acc[k].errs++;
+                    if (!acc[k]) acc[k] = { ts: d[0], v: d[1], p: d[2], r: d[3], alertas: [] }; // Guarda a lista de alertas
+                    if (falhas.includes(d[5])) {
+                        // Salva o detalhe exato da Não Conformidade
+                        acc[k].alertas.push({ nome: d[4], status: d[5], obs: d[6] || '' }); 
+                    }
                     return acc;
                 }, {});
 
@@ -378,29 +381,50 @@ const send = async () => {
                                 </div>
                             </>
                         ) : (
-                            <div className="space-y-12 animate-fade">
+                          <div className="space-y-12 animate-fade">
                                 <h1 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">Relatório <span className="text-red-600 underline">Geral</span></h1>
                                 <div className="grid grid-cols-1 gap-6">
                                     {audit.history.map((h, i) => (
-                                        <div key={i} className="glass p-8 rounded-3xl flex justify-between items-center border border-white/5 hover:bg-white/5 transition-all">
-                                            <div className="flex gap-10 items-center">
-                                                <span className="text-slate-500 font-mono text-sm">{h.ts}</span>
-                                                <span className="font-black text-white italic text-xl w-32">{h.v}</span>
-                                                <div><p className="text-red-500 font-bold uppercase">{h.r}</p><p className="text-xs text-slate-500 font-mono mt-1">{h.p}</p></div>
+                                        <div key={i} className="glass p-8 rounded-3xl flex flex-col gap-6 border border-white/5 hover:bg-white/5 transition-all">
+                                            
+                                            {/* Cabeçalho da Auditoria */}
+                                            <div className="flex justify-between items-center w-full">
+                                                <div className="flex gap-10 items-center">
+                                                    <span className="text-slate-500 font-mono text-sm">{h.ts}</span>
+                                                    <span className="font-black text-white italic text-xl w-32">{h.v}</span>
+                                                    <div>
+                                                        <p className="text-red-500 font-bold uppercase">{h.r}</p>
+                                                        <p className="text-xs text-slate-500 font-mono mt-1">{h.p}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className={`px-4 py-2 rounded-xl text-xs font-black ${h.alertas.length === 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                        {h.alertas.length === 0 ? '100% CONFORME' : `${h.alertas.length} ALERTA(S) REGISTRADO(S)`}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <span className={`px-4 py-2 rounded-xl text-xs font-black ${h.errs === 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                                                    {h.errs === 0 ? '100% CONFORME' : `${h.errs} ALERTA(S) REGISTRADO(S)`}
-                                                </span>
-                                            </div>
+
+                                            {/* Área de Detalhamento das Falhas (Só aparece se houver alertas) */}
+                                            {h.alertas.length > 0 && (
+                                                <div className="pt-5 border-t border-white/5 grid grid-cols-2 gap-4">
+                                                    {h.alertas.map((alerta, idx) => (
+                                                        <div key={idx} className="flex items-start gap-4 bg-red-950/20 p-4 rounded-2xl border border-red-900/30">
+                                                            <i data-lucide="alert-triangle" className="text-red-500 w-5 h-5 mt-0.5"></i>
+                                                            <div>
+                                                                <p className="text-xs font-black text-white uppercase">{alerta.nome}</p>
+                                                                <p className="text-[10px] text-red-400 font-bold uppercase mt-1.5">
+                                                                    [{alerta.status}] {alerta.obs ? `- ${alerta.obs}` : ''}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        )}
-                    </main>
-                </div>
-            );
 
             if (view === 'sucesso') return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-950 text-center animate-fade">
