@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - OPS CENTER SAE</title>
+    <title>HACO - VERIFICAÇÃO DE AMBULÂNCIAS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -29,9 +29,9 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec";
 
         const VIATURAS = [
-            { id: 'basica', label: 'Básica (USB)', bg: 'bg-blue-600', border: 'border-blue-500' },
-            { id: 'avancada', label: 'Avançada (USA)', bg: 'bg-rose-600', border: 'border-rose-500' },
-            { id: 'paje', label: 'PAJÉ (Tático)', bg: 'bg-emerald-600', border: 'border-emerald-500' }
+            { id: 'basica', label: 'Básica', bg: 'bg-blue-600', border: 'border-blue-500' },
+            { id: 'avancada', label: 'Avançada', bg: 'bg-rose-600', border: 'border-rose-500' },
+            { id: 'paje', label: 'PAJÉ', bg: 'bg-emerald-600', border: 'border-emerald-500' }
         ];
 
         const CATEGORIES = ["Administrativo & VA", "Mochila Vermelha", "Meds & DEA", "Gases & Trauma", "Armários & Balcão", "Finalizar"];
@@ -39,7 +39,7 @@
         // MATRIZ COMPLETA SAMU CANOAS (11 PÁGINAS INTEGRAIS)
         const CHECKLIST = [
             // --- PASSO 0: PÁG 1 e 2 (Admin e VA) ---
-            { id: 'smart', n: 'Smartphone e Carregador', cat: 0, opts: ['OK', 'FA'] },
+            { id: 'smart', n: 'Rádio Comunicador', cat: 0, opts: ['OK', 'FA'] },
             { id: 'carimbo', n: 'Carimbo da Viatura', cat: 0, opts: ['OK', 'FA'] },
             { id: 'bolsa_va', n: 'Bolsa de Via Aérea', cat: 0, opts: ['OK', 'FA', 'N/A'] },
             { id: 'bvm_ad', n: 'AMBU (BVM) Adulto', cat: 0, opts: ['OK', 'FA'] },
@@ -188,7 +188,7 @@
             };
 
             const send = async () => {
-                if(!form.placa || !form.posto || !form.guerra) return alert("ERRO TÁTICO: Identificação Militar é obrigatória.");
+                if(!form.placa || !form.posto || !form.guerra) return alert("ERRO: Identificação Militar é obrigatória.");
                 setLoading(true);
                 const payload = {
                     action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`, obsGerais: form.obs,
@@ -197,7 +197,7 @@
                 try {
                     await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                     setView('sucesso');
-                } catch (e) { alert("Erro de Conexão com o Servidor HACO."); }
+                } catch (e) { alert("Erro de Conexão com o Servidor."); }
                 setLoading(false);
             };
 
@@ -216,8 +216,8 @@
                 <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade">
                     <div className="text-center space-y-4">
                         <div className="bg-red-600 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(220,38,38,0.4)]"><i data-lucide="cross" className="text-white w-10 h-10"></i></div>
-                        <h1 className="text-6xl font-black italic uppercase tracking-tighter">HACO <span className="text-red-600">SAE</span></h1>
-                        <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-xs">Auditoria Completa SAMU</p>
+                        <h1 className="text-6xl font-black italic uppercase tracking-tighter">Ambulâncias <span className="text-red-600">HACO</span></h1>
+                        <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-xs">Checklist de Equipamentos de Saúde</p>
                     </div>
                     <div className="grid grid-cols-1 gap-6 w-full max-w-sm">
                         {VIATURAS.map(v => (
@@ -252,8 +252,8 @@
                                     <h3 className="font-black text-white text-sm uppercase mb-4">Identificação</h3>
                                     <input type="text" placeholder="PLACA VIATURA" className="w-full p-5 bg-black/50 border border-white/10 rounded-2xl font-black text-center text-2xl uppercase text-white outline-none focus:border-red-500" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
                                     <div className="grid grid-cols-2 gap-4">
-                                        <input type="text" placeholder="POSTO (1T)" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm outline-none focus:border-red-500" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
-                                        <input type="text" placeholder="GUERRA" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm outline-none focus:border-red-500" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="POSTO/GRADUAÇÃO" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm outline-none focus:border-red-500" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="NOME DE GUERRA" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm outline-none focus:border-red-500" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
                                     </div>
                                 </div>
                             )}
@@ -282,11 +282,11 @@
                                 <div className="space-y-8 animate-fade">
                                     <div className="glass p-8 rounded-[2rem]">
                                         <h3 className="font-black text-white text-sm uppercase mb-4">Avarias & Observações Gerais</h3>
-                                        <textarea rows="5" placeholder="Descreva intercorrências da viatura, pendências de manutenção ou avarias no smartphone..." className="w-full p-5 bg-black/40 border border-white/10 rounded-2xl font-bold text-white text-xs outline-none focus:border-red-500" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
+                                        <textarea rows="5" placeholder="Descreva intercorrências da viatura, pendências de manutenção ou avarias..." className="w-full p-5 bg-black/40 border border-white/10 rounded-2xl font-bold text-white text-xs outline-none focus:border-red-500" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
                                     </div>
                                     <div className="text-center space-y-6">
                                         <button onClick={send} disabled={loading} className="w-full bg-red-600 text-white font-black py-7 rounded-[2rem] shadow-[0_0_30px_rgba(220,38,38,0.4)] active:scale-95 transition-all text-sm uppercase tracking-widest">
-                                            {loading ? 'SINCRONIZANDO COM HACO...' : 'TRANSMITIR AUDITORIA'}
+                                            {loading ? 'SINCRONIZANDO...' : 'TRANSMITIR'}
                                         </button>
                                     </div>
                                 </div>
@@ -316,7 +316,7 @@
                         {tab === 'monitor' ? (
                             <>
                                 <header className="flex justify-between items-end border-b border-white/5 pb-10">
-                                    <div><h1 className="text-8xl font-black tracking-tighter uppercase italic text-white leading-none">PRONTIDÃO <span className="text-red-600">SAE</span></h1><p className="text-slate-500 font-mono text-sm uppercase mt-4 tracking-[0.5em]">Ops Center - Auditoria SAMU Canoas</p></div>
+                                    <div><h1 className="text-8xl font-black tracking-tighter uppercase italic text-white leading-none">Controle <span className="text-red-600">Ambulâncias</span></h1><p className="text-slate-500 font-mono text-sm uppercase mt-4 tracking-[0.5em]">Ops Center - Auditoria SAMU Canoas</p></div>
                                     <div className="glass p-12 rounded-[3rem] text-center min-w-[280px] border-t-8 border-emerald-500">
                                         <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.op}%</span>
                                         <p className="text-xs font-black text-slate-500 mt-4 tracking-widest uppercase italic">Conformidade Operacional</p>
