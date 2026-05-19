@@ -3,20 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - OPS CENTER SAE</title>
+    <title>HACO - SISTEMA SAE (V19.0 TACTICAL)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
+        
+        :root {
+            --bg-obsidian: #0A0F17;
+            --panel-obsidian: #111827;
+            --fab-red: #DC2626;
+            --fab-red-hover: #B91C1C;
+            --rescue-green: #10B981;
+            --text-primary: #F3F4F6;
+            --text-secondary: #9CA3AF;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-obsidian); color: var(--text-primary); overflow-x: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .glass { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        /* Tactical Panel Style */
+        .t-panel { background-color: var(--panel-obsidian); border: 1px solid rgba(255, 255, 255, 0.03); }
+        .t-border { border-color: rgba(255, 255, 255, 0.05); }
+
+        /* Hard Button Style */
+        .btn-t-primary { background-color: var(--fab-red); transition: all 0.1s ease-in-out; border-bottom: 3px solid rgba(0,0,0,0.3); }
+        .btn-t-primary:active { transform: translateY(1px); border-bottom-width: 1px; }
+        
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .animate-fade { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -26,93 +45,40 @@
         const { useState, useEffect, useMemo } = React;
 
         // ⚠️ COLE SUA URL AQUI ⚠️
-        const API_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec";
+        const API_URL = "SUA_URL_AQUI";
 
         const VIATURAS = [
-            { id: 'basica', label: 'Básica', bg: 'bg-blue-600', border: 'border-blue-500' },
-            { id: 'avancada', label: 'Avançada', bg: 'bg-rose-600', border: 'border-rose-500' },
-            { id: 'paje', label: 'PAJÉ', bg: 'bg-emerald-600', border: 'border-emerald-500' }
+            { id: 'basica', label: 'Básica', bg: 'bg-blue-950', border: 'border-blue-700', tColor: 'text-blue-400' },
+            { id: 'avancada', label: 'Avançada', bg: 'bg-red-950', border: 'border-red-700', tColor: 'text-red-400' },
+            { id: 'paje', label: 'PAJÉ', bg: 'bg-emerald-950', border: 'border-emerald-700', tColor: 'text-emerald-400' }
         ];
 
-        const CATEGORIES = ["Administrativo & VA", "Mochila Vermelha", "Meds & DEA", "Gases & Trauma", "Armários & Balcão", "Finalizar"];
+        const CATEGORIES = ["Status & VA", "Mochila Vermelha", "Meds & DEA", "Gases & Trauma", "Balcão & Finalizar"];
 
-        // MATRIZ COMPLETA SAMU CANOAS (11 PÁGINAS INTEGRAIS)
+        // MATRIZ COMPLETA TÁTICA (Consolidada para agilidade mobile)
         const CHECKLIST = [
-            { id: 'smart', n: 'Rádio Comunicador', cat: 0, opts: ['OK', 'FA'] },
+            // cat 0: Admin & VA
+            { id: 'radio', n: 'Rádio Comunicador', cat: 0, opts: ['OK', 'FA'] },
             { id: 'carimbo', n: 'Carimbo da Viatura', cat: 0, opts: ['OK', 'FA'] },
-            { id: 'bolsa_va', n: 'Bolsa de Via Aérea', cat: 0, opts: ['OK', 'FA', 'N/A'] },
-            { id: 'bvm_ad', n: 'AMBU (BVM) Adulto', cat: 0, opts: ['OK', 'FA'] },
-            { id: 'bvm_ped', n: 'AMBU (BVM) Pediátrico', cat: 0, opts: ['OK', 'FA'] },
-            { id: 'bvm_neo', n: 'AMBU (BVM) Neonatal', cat: 0, opts: ['OK', 'FA'] },
-            { id: 'oculos_prot', n: 'Óculos de proteção (1 un)', cat: 0, opts: ['OK', 'FA'] },
-            { id: 'seringa20', n: 'Seringa 20ml (2 un)', cat: 0, opts: ['OK', 'FA'] },
-            { id: 'ext_o2_va', n: 'Extensor de O2 (1 un)', cat: 0, opts: ['OK', 'FA'] },
-            { id: 'guedel', n: 'Cânulas Guedel (0, 1, 2, 3, 4, 5)', cat: 0, opts: ['TODAS COMPLETAS', 'FALTA (Anotar)'] },
-            { id: 'esteto', n: 'Estetoscópio', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'esfig_ad', n: 'Esfigmomanômetro Adulto', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'esfig_ped', n: 'Esfigmomanômetro Pediátrico', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'esfig_ob', n: 'Esfigmomanômetro Obeso', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'hgt', n: 'HGT (Aparelho + 10 Fitas/Lancetas)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'termo', n: 'Termômetro', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'oxi_pulso', n: 'Oxímetro de Pulso', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'nebul', n: 'Kit Nebulímetro (1 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'asp_rig', n: 'Aspirador Rígido (1 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'ext_o2_b', n: 'Extensor de O2 (2 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'oculos_nasal', n: 'Óculos Nasal (2 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'curativos_b', n: 'Algodão / Esparadrapo / Micropore', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'ext_asp', n: 'Extensor de Aspiração (2 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'sondas_asp', n: 'Sonda Aspiração (8, 10, 12, 18 - 2 un/cada)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'naso_longa', n: 'Naso Longa (8, 14, 16, 20 - 2 un/cada)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'manta', n: 'Manta Térmica (2 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'perfuro', n: 'Pérfuro (Frasco Descartex)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'lixo', n: 'Saco de Lixo', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'atadura', n: 'Atadura (06, 10, 20 cm - 3 un/cada)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'n95', n: 'Máscara N95 (3 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'masc_cirur', n: 'Máscara Cirúrgica (3 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'compressa_int', n: 'Compressa (5 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'gaze_int', n: 'Gaze (10 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'sf_int', n: 'Kit Soro Fisiológico (1 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'rl_int', n: 'Kit Ringer Lactato (1 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'torniquete', n: 'Torniquete (1 un)', cat: 1, opts: ['OK', 'FA'] },
-            { id: 'med_geral', n: 'Medicação Geral', cat: 2, opts: ['COMPLETA', 'INCOMPLETA', 'FA'] },
-            { id: 'med_ctrl', n: 'Medicações Controladas', cat: 2, opts: ['COMPLETA C/ LACRE', 'COMPLETA S/ LACRE', 'INCOMPLETA', 'FA'] },
-            { id: 'dea_status', n: 'DEA', cat: 2, opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
-            { id: 'dea_pas_ad', n: 'Pás Adulto (DEA)', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'dea_pas_ped', n: 'Pás Pediátricas (DEA)', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'dea_pilhas', n: 'Pilhas (DEA)', cat: 2, opts: ['OK', 'FA'] },
-            { id: 'o2_g_t1', n: 'O2 Grande - Torpedo 1', cat: 3, opts: ['LACRADO', 'MC > 20', 'NECESSÁRIO TROCA', 'FALTA'] },
-            { id: 'o2_g_t2', n: 'O2 Grande - Torpedo 2', cat: 3, opts: ['LACRADO', 'MC > 20', 'NECESSÁRIO TROCA', 'FALTA'] },
-            { id: 'o2_p_t1', n: 'O2 Portátil - Torpedo 1', cat: 3, opts: ['LACRADO', 'MC > 40', 'NECESSÁRIO TROCA', 'FALTA'] },
-            { id: 'o2_p_t2', n: 'O2 Portátil - Torpedo 2', cat: 3, opts: ['LACRADO', 'MC > 40', 'NECESSÁRIO TROCA', 'FALTA'] },
-            { id: 'ar_comp', n: 'Cilindro Ar Comprimido', cat: 3, opts: ['LACRADO', 'MC > 20', 'NECESSÁRIO TROCA', 'FALTA'] },
-            { id: 'maca_rig', n: 'Maca Rígida', cat: 3, opts: ['OK', 'FALTA', 'NECESSÁRIO TROCA'] },
-            { id: 'coxins', n: 'Coxins', cat: 3, opts: ['OK', 'FALTA', 'NECESSÁRIO TROCA'] },
-            { id: 'cinto_polvo', n: 'Cinto Polvo', cat: 3, opts: ['OK', 'FALTA', 'NECESSÁRIO TROCA'] },
-            { id: 'velcros', n: 'Integridade Velcros', cat: 3, opts: ['OK', 'FALTA', 'NECESSÁRIO TROCA'] },
-            { id: 'ked', n: 'KED', cat: 3, opts: ['OK', 'FA', 'N/A'] },
-            { id: 'talas', n: 'Talas P, M, G', cat: 3, opts: ['OK', 'FA'] },
-            { id: 'cad_rodas', n: 'Cadeira de Rodas', cat: 3, opts: ['OK', 'FA'] },
-            { id: 'colchao_ret', n: 'Colchão Maca Retrátil', cat: 3, opts: ['OK', 'FA'] },
-            { id: 'colchao_res', n: 'Colchão Reserva', cat: 3, opts: ['OK', 'EM USO', 'FA'] },
-            { id: 'cones', n: 'Cones de Sinalização', cat: 3, opts: ['COMPLETOS (5)', 'FALTA (Anotar)'] },
-            { id: 'fluxo_parede', n: 'Fluxômetro Parede', cat: 4, opts: ['1', '2', 'FA'] },
-            { id: 'masc_hud_ad', n: 'Masc Hudson/Extensor ADULTO (2 de cada)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'masc_hud_ped', n: 'Masc Hudson/Extensor PEDIÁTRICO (2 de cada)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'frasco_parede', n: 'Frasco Aspiração (1 un)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'ext_sonda_parede', n: 'Extensão Aspiração / Sonda (1 de cada)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'cobertor', n: 'Cobertor de Lã (1 un)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'colares', n: 'Colar Cervical (Inf, PP, P, M, G, GG - 2 cada)', cat: 4, opts: ['TODOS COMPLETOS', 'FALTA (Anotar)'] },
-            { id: 'chave_o2', n: 'Chave de Oxigênio (1 un)', cat: 4, opts: ['OK', 'FALTA', 'FA'] },
-            { id: 'carreg_oxi', n: 'Carregador Oxímetro c/ cabo (1 un)', cat: 4, opts: ['OK', 'FALTA', 'FA'] },
-            { id: 'lanterna', n: 'Lanterna (1 un)', cat: 4, opts: ['OK', 'FALTA', 'FA'] },
-            { id: 'compressa_arm', n: 'Compressas (5 un)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'almotolias', n: 'Almotolias (Álcool / H2O2 - 1 cada)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'gaze_arm', n: 'Gaze (10 un)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'curativos_arm', n: 'Esparadrapo / Micropore (1 cada)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'caixa_descarp', n: 'Caixa Descarpack (1 un)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'sf_arm', n: 'Soro Fisiológico (1000/500/100 - 3 de cada)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'rl_arm', n: 'Ringer Lactato 500 (3 un)', cat: 4, opts: ['OK', 'FA'] },
-            { id: 'sg_arm', n: 'Soro Glicosado 500 (3 de cada)', cat: 4, opts: ['OK', 'FA'] }
+            { id: 'bvm_kits', n: 'AMBU/BVM (Ad/Ped/Neo)', cat: 0, opts: ['OK', 'FA'] },
+            { id: 'guedel_kit', n: 'Cânulas Guedel (Completo)', cat: 0, opts: ['OK', 'FALTA'] },
+            // cat 1: Mochila Vermelha
+            { id: 'sinais_kit', n: 'Kit Sinais Vitais (Esteto/Esfig/HGT/Oxi)', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'bolso_b_kit', n: 'Nebul/Sondas/Óculos/Aspiração', cat: 1, opts: ['OK', 'FA'] },
+            { id: 'trauma_kit', n: 'Ataduras/Gaze/Torniquete/Manta', cat: 1, opts: ['OK', 'FA'] },
+            // cat 2: Meds & DEA
+            { id: 'med_geral', n: 'Medicação Geral', cat: 2, opts: ['COMPLETA', 'FA'] },
+            { id: 'med_ctrl', n: 'Meds Controladas', cat: 2, opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
+            { id: 'dea_kit', n: 'DEA (Status/Pás Ad-Ped/Pilhas)', cat: 2, opts: ['OK', 'FA'] },
+            // cat 3: Gases & Trauma
+            { id: 'o2_g_kit', n: 'O2 Grande (Torpedo 1 e 2)', cat: 3, opts: ['LACRADO', 'MC>20', 'TROCA', 'FA'] },
+            { id: 'o2_p_kit', n: 'O2 Portátil (Torpedo 1 e 2)', cat: 3, opts: ['LACRADO', 'MC>40', 'TROCA', 'FA'] },
+            { id: 'imob_kit', n: 'Imobilização Trauma (Ked/Talas/Maca/Velcros)', cat: 3, opts: ['OK', 'FA'] },
+            // cat 4: Balcão & Finalizar
+            { id: 'parede_kit', n: 'Flux/ Hudson/ Aspiração Parede', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'cobertor', n: 'Cobertor (1 un)', cat: 4, opts: ['OK', 'FA'] },
+            { id: 'colares_kit', n: 'Colares Cervicais (Completo)', cat: 4, opts: ['OK', 'FALTA'] },
+            { id: 'gaveta_kit', n: 'Chave O2/ Carr. Oxim/ Lanterna', cat: 4, opts: ['OK', 'FA'] }
         ];
 
         function App() {
@@ -126,22 +92,22 @@
 
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step, db, tab]);
 
-            // --- LÓGICA DO DASHBOARD DA TV ---
+            // --- CÉREBRO TÁTICO ---
             const audit = useMemo(() => {
-                if (!db.length) return { op: 0, shifts: {}, alerts: [], history: [] };
+                if (!db.length) return { op: 0, shifts: {}, history: [] };
                 
                 const today = new Date().toLocaleDateString('pt-BR');
-                const total = db.filter(d => d[4] !== 'INFO').length;
-                const oks = db.filter(d => ['OK', 'COMPLETAS', 'COMPLETA', 'COMPLETA C/ LACRE', 'LACRADO', 'MC > 20', 'MC > 40', '1', '2', 'TODAS COMPLETAS', 'TODOS COMPLETOS', 'COMPLETOS (5)'].includes(d[5])).length;
+                const conformeOptions = ['OK', 'COMPLETA', 'C/ LACRE', 'LACRADO', 'MC>20', 'MC>40'];
+                const falhaOptions = ['FA', 'FALTA', 'S/ LACRE', 'TROCA'];
                 
-                const falhas = ['FA', 'FALTA', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA', 'FALTA (Anotar)'];
-                const nc = db.filter(d => falhas.includes(d[5])).map(d => ({ ts: d[0], v: d[1], p: d[2], r: d[3], i: d[4], o: d[6] || d[5] })).reverse();
+                const total = db.filter(d => d[4] !== 'INFO').length;
+                const oks = db.filter(d => conformeOptions.includes(d[5].trim().toUpperCase())).length;
                 
                 const historyMap = db.reduce((acc, d) => {
                     if(d[4] === 'INFO') return acc;
                     const k = `${d[0]}_${d[2]}`;
                     if (!acc[k]) acc[k] = { ts: d[0], v: d[1], p: d[2], r: d[3], alertas: [] };
-                    if (falhas.includes(d[5])) {
+                    if (falhaOptions.includes(d[5].trim().toUpperCase())) {
                         acc[k].alertas.push({ nome: d[4], status: d[5], obs: d[6] || '' }); 
                     }
                     return acc;
@@ -154,8 +120,7 @@
                         const l = logs.find(d => { 
                             const match = d[0].match(/(\d{2}):/);
                             if(!match) return false;
-                            const h = parseInt(match[1]);
-                            return h >= s && h < e;
+                            return parseInt(match[1]) >= s && parseInt(match[1]) < e;
                         });
                         return l ? { ok: true, u: l[3] } : { ok: false };
                     };
@@ -165,12 +130,11 @@
                 return { 
                     op: total > 0 ? Math.round((oks / total) * 100) : 0, 
                     shifts, 
-                    alerts: nc.slice(0, 10), 
                     history: Object.values(historyMap).reverse() 
                 };
             }, [db]);
 
-            // --- AÇÕES DO APLICATIVO ---
+            // --- OPERAÇÕES ---
             const start = (v) => {
                 const items = {};
                 CHECKLIST.forEach(i => items[i.id] = { status: i.opts[0], obs: '' });
@@ -181,31 +145,25 @@
             };
 
             const send = async () => {
-                if(!form.placa || !form.posto || !form.guerra) {
-                    return alert("ERRO TÁTICO: Identificação Militar é obrigatória.");
-                }
-
-                // TRAVA DE AUDITORIA
-                const statusCriticos = ['FA', 'FALTA', 'FALTA (Anotar)', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA'];
-                const itemSemJustificativa = Object.entries(form.items).find(([id, val]) => {
-                    return statusCriticos.includes(val.status) && val.obs.trim() === '';
-                });
-
-                if (itemSemJustificativa) {
-                    const idDoItemFalho = itemSemJustificativa[0];
-                    const nomeDoItem = CHECKLIST.find(i => i.id === idDoItemFalho).n;
-                    return alert(`BLOQUEIO DE AUDITORIA:\n\nO item "${nomeDoItem}" foi marcado como irregular (${itemSemJustificativa[1].status}).\n\nÉ OBRIGATÓRIO digitar o motivo, a numeração ou a peça faltante na caixa de observação antes de transmitir.`);
+                if(!form.placa || !form.posto || !form.guerra) return alert("BLOQUEIO: Identificação Militar incompleta.");
+                
+                const statusCriticos = ['FA', 'FALTA', 'S/ LACRE', 'TROCA'];
+                const falha = Object.entries(form.items).find(([id, v]) => statusCriticos.includes(v.status) && v.obs.trim() === '');
+                
+                if (falha) {
+                    const nome = CHECKLIST.find(i => i.id === falha[0]).n;
+                    return alert(`TRAVA DE AUDITORIA:\n\nItem: ${nome}\nStatus: ${falha[1].status}\n\nÉ OBRIGATÓRIO descrever a NC/Numeração na observação.`);
                 }
 
                 setLoading(true);
                 const payload = {
                     action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`, obsGerais: form.obs,
-                    items: Object.entries(form.items).map(([id, val]) => ({ nome: CHECKLIST.find(i => i.id === id).n, status: val.status, obs: val.obs }))
+                    items: Object.entries(form.items).map(([id, v]) => ({ nome: CHECKLIST.find(i => i.id === id).n, status: v.status, obs: v.obs }))
                 };
                 try {
                     await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
                     setView('sucesso');
-                } catch (e) { alert("Erro de Conexão com o Servidor HACO."); }
+                } catch (e) { alert("ERRO DE REDE HACO."); }
                 setLoading(false);
             };
 
@@ -215,133 +173,129 @@
                     const r = await fetch(`${API_URL}?action=read&t=${Date.now()}`);
                     setDb(await r.json());
                     setView('admin');
-                } catch (e) { alert("Falha ao puxar os dados."); }
+                } catch (e) { alert("FALHA DE SINCRONIZAÇÃO."); }
                 setLoading(false);
             };
 
-            // --- VIEW: MENU PRINCIPAL ---
+            // --- VIEW: MENU TÁTICO ---
             if (view === 'menu') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade">
-                    <div className="text-center space-y-4">
-                        <div className="bg-red-600 w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(220,38,38,0.4)]"><i data-lucide="cross" className="text-white w-10 h-10"></i></div>
-                        <h1 className="text-6xl font-black italic uppercase tracking-tighter">Ambulâncias <span className="text-red-600">HACO</span></h1>
-                        <p className="text-slate-500 font-bold uppercase tracking-[0.4em] text-xs">Checklist de Equipamentos de Saúde</p>
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-16 animate-fade bg-[#0A0F17]">
+                    <div className="text-center space-y-3">
+                        <div className="bg-red-600 w-16 h-16 rounded-lg flex items-center justify-center mx-auto shadow-xl"><i data-lucide="shield-check" className="text-white w-8 h-8"></i></div>
+                        <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white">SISTEMA <span className="text-red-600">SAE</span></h1>
+                        <p className="text-gray-500 font-mono text-[10px] uppercase tracking-[0.5em]">Hospital de Aeronáutica de Canoas</p>
                     </div>
-                    <div className="grid grid-cols-1 gap-6 w-full max-w-sm">
+                    <div className="grid grid-cols-1 gap-5 w-full max-w-sm">
                         {VIATURAS.map(v => (
-                            <button key={v.id} onClick={() => start(v)} className={`glass p-8 rounded-3xl flex items-center justify-between active:scale-95 transition-all border-l-8 ${v.border}`}>
-                                <span className="font-black text-white uppercase text-sm tracking-widest">{v.label}</span>
-                                <div className={`${v.bg} p-3 rounded-xl`}><i data-lucide="truck" className="text-white"></i></div>
+                            <button key={v.id} onClick={() => start(v)} className={`t-panel p-6 rounded-lg flex items-center justify-between transition-all border border-l-4 hover:border-red-600 ${v.border}`}>
+                                <span className={`font-bold text-lg uppercase tracking-tight ${v.tColor}`}>{v.label}</span>
+                                <i data-lucide="truck" className="text-gray-600 w-5 h-5"></i>
                             </button>
                         ))}
                     </div>
-                    <button onClick={sync} className="text-slate-600 font-black uppercase text-[10px] tracking-widest pt-10 border-t border-white/10 w-full max-w-xs transition-colors hover:text-red-500">Administração</button>
+                    <button onClick={sync} className="text-gray-700 font-bold uppercase text-[10px] tracking-widest pt-10 border-t t-border w-full max-w-xs hover:text-red-500">Ops Center (TV/Desktop)</button>
                 </div>
             );
 
-            // --- VIEW: COLETOR MOBILE ---
+            // --- VIEW: COLETOR MOBILE (TACTICAL UI) ---
             if (view === 'form') {
                 const isFinal = step === CATEGORIES.length - 1;
                 const items = CHECKLIST.filter(i => i.cat === step);
 
                 return (
-                    <div className="min-h-screen flex flex-col bg-slate-950 pb-32 animate-fade">
-                        <header className={`p-6 ${vSel.bg} flex justify-between items-center sticky top-0 z-50 rounded-b-3xl shadow-2xl`}>
-                            <button onClick={() => setView('menu')} className="bg-black/20 p-2 rounded-xl text-white"><i data-lucide="chevron-left"></i></button>
-                            <div className="text-center text-white"><h1 className="font-black uppercase text-xs tracking-widest">{vSel.label}</h1></div>
-                            <span className="font-mono text-[10px] font-black bg-black/30 px-3 py-1 rounded-full text-white">{step + 1}/{CATEGORIES.length}</span>
+                    <div className="min-h-screen flex flex-col bg-[#0A0F17] pb-32 animate-fade">
+                        <header className={`p-5 ${vSel.bg} flex justify-between items-center sticky top-0 z-50 rounded-b-lg shadow-xl`}>
+                            <button onClick={() => setView('menu')} className="text-white opacity-60"><i data-lucide="arrow-left"></i></button>
+                            <h1 className="font-bold uppercase text-xs text-white tracking-widest">{vSel.label}</h1>
+                            <span className="font-mono text-[10px] font-bold text-white bg-black/40 px-3 py-1 rounded">{step + 1}/{CATEGORIES.length}</span>
                         </header>
 
-                        <main className="p-4 space-y-6 flex-1 overflow-y-auto no-scrollbar">
-                            <h2 className="text-2xl font-black uppercase text-red-500 italic px-2 mb-6">{CATEGORIES[step]}</h2>
+                        <main className="p-4 space-y-6 flex-1 overflow-y-auto no-scrollbar mt-4">
+                            <h2 className="text-sm font-black uppercase text-red-500 tracking-wider mb-8 flex items-center gap-3"><i data-lucide="tag" className="w-4 h-4"></i> {CATEGORIES[step]}</h2>
 
                             {step === 0 && (
-                                <div className="space-y-6 glass p-8 rounded-[2rem] border border-white/10">
-                                    <h3 className="font-black text-white text-sm uppercase mb-4">Identificação</h3>
-                                    <input type="text" placeholder="PLACA VIATURA" className="w-full p-5 bg-black/50 border border-white/10 rounded-2xl font-black text-center text-2xl uppercase text-white outline-none focus:border-red-500" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <input type="text" placeholder="POSTO/GRADUAÇÃO" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm outline-none focus:border-red-500" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
-                                        <input type="text" placeholder="NOME DE GUERRA" className="w-full p-4 bg-black/50 border border-white/10 rounded-2xl font-bold text-center uppercase text-white text-sm outline-none focus:border-red-500" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                <div className="space-y-5 t-panel p-6 rounded-lg shadow-lg">
+                                    <input type="text" placeholder="PLACA DO VEÍCULO" className="w-full p-4 bg-black/30 border t-border rounded font-mono font-bold text-center text-xl uppercase text-white placeholder:text-gray-700 focus:border-red-600 outline-none" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <input type="text" placeholder="POSTO (1T/SG)" className="w-full p-3 bg-black/30 border t-border rounded font-bold uppercase text-white placeholder:text-gray-700 text-xs focus:border-red-600 outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="GUERRA" className="w-full p-3 bg-black/30 border t-border rounded font-bold uppercase text-white placeholder:text-gray-700 text-xs focus:border-red-600 outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
                                     </div>
                                 </div>
                             )}
 
                             {!isFinal && items.map(i => (
-                                <div key={i.id} className="glass p-6 rounded-[2rem] space-y-5 border border-white/5">
-                                    <span className="font-black text-[13px] uppercase tracking-tight text-white block">{i.n}</span>
-                                    <div className="flex flex-wrap gap-2">
+                                <div key={i.id} className="t-panel p-5 rounded-lg space-y-4 shadow-md border-b-2 border-transparent hover:border-red-900 transition-colors">
+                                    <span className="font-bold text-[11px] uppercase tracking-wider text-gray-400 block">{i.n}</span>
+                                    <div className="flex flex-wrap gap-2 pt-1">
                                         {i.opts.map(opt => {
-                                            const isAlert = ['FA', 'FALTA', 'FALTA (Anotar)', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA'].includes(opt);
+                                            const isF = ['FA', 'FALTA', 'S/ LACRE', 'TROCA'].includes(opt);
                                             return (
                                                 <button key={opt} onClick={() => setForm({...form, items: {...form.items, [i.id]: { ...form.items[i.id], status: opt }}})} 
-                                                    className={`px-4 py-3 rounded-xl font-black text-[10px] flex-1 transition-all ${form.items[i.id].status === opt ? (isAlert ? 'bg-red-600 text-white shadow-lg scale-105 border border-red-500' : 'bg-emerald-600 text-white shadow-lg scale-105 border border-emerald-500') : 'bg-black/40 text-slate-400 border border-transparent'}`}>
+                                                    className={`px-4 py-2.5 rounded-sm font-bold text-[10px] flex-1 transition-all border ${form.items[i.id].status === opt ? (isF ? 'bg-red-950 border-red-600 text-red-200' : 'bg-emerald-950 border-emerald-600 text-emerald-200') : 'bg-gray-900 text-gray-500 border-gray-800'}`}>
                                                     {opt}
                                                 </button>
                                             )
                                         })}
                                     </div>
-                                    <input type="text" placeholder={form.items[i.id].status.includes('LACRE') ? "Digite o número do Lacre/Obs..." : "Observação / Descreva reposição..."} 
-                                        className={`w-full p-4 bg-black/30 rounded-xl text-xs text-slate-200 border-none outline-none focus:ring-2 focus:ring-red-600/50 ${['FA', 'FALTA', 'FALTA (Anotar)', 'INCOMPLETA', 'COMPLETA S/ LACRE', 'TROCA NECESSÁRIA', 'NECESSÁRIO TROCA'].includes(form.items[i.id].status) ? 'bg-red-950/20 placeholder-red-900 italic font-bold' : ''}`} 
-                                        value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
+                                    <input type="text" placeholder="Anotar NC / Número Lacre..." className={`w-full p-3 bg-black/30 rounded text-xs text-gray-300 placeholder:text-gray-700 border-none outline-none focus:ring-1 focus:ring-red-600 ${['FA', 'FALTA', 'S/ LACRE', 'TROCA'].includes(form.items[i.id].status) ? 'bg-red-950/20 italic placeholder:text-red-950' : ''}`} value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
                                 </div>
                             ))}
 
                             {isFinal && (
-                                <div className="space-y-8 animate-fade">
-                                    <div className="glass p-8 rounded-[2rem]">
-                                        <h3 className="font-black text-white text-sm uppercase mb-4">Avarias & Observações Gerais</h3>
-                                        <textarea rows="5" placeholder="Descreva intercorrências da viatura, pendências de manutenção ou avarias..." className="w-full p-5 bg-black/40 border border-white/10 rounded-2xl font-bold text-white text-xs outline-none focus:border-red-500" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
+                                <div className="space-y-8 animate-fade mt-6">
+                                    <div className="t-panel p-6 rounded-lg">
+                                        <h3 className="font-bold text-gray-400 text-xs uppercase mb-3 tracking-wider">Observações Gerais do Plantão</h3>
+                                        <textarea rows="4" placeholder="Descreva intercorrências da viatura, manutenções necessárias ou pendências..." className="w-full p-4 bg-black/30 rounded text-gray-300 text-xs outline-none focus:ring-1 focus:ring-red-600 placeholder:text-gray-700" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
                                     </div>
-                                    <div className="text-center space-y-6">
-                                        <button onClick={send} disabled={loading} className="w-full bg-red-600 text-white font-black py-7 rounded-[2rem] shadow-[0_0_30px_rgba(220,38,38,0.4)] active:scale-95 transition-all text-sm uppercase tracking-widest">
-                                            {loading ? 'SINCRONIZANDO...' : 'TRANSMITIR'}
-                                        </button>
-                                    </div>
+                                    <button onClick={send} disabled={loading} className="w-full btn-t-primary text-white font-bold py-5 rounded-lg active:scale-95 text-xs uppercase tracking-widest">
+                                        {loading ? 'SINCRONIZANDO...' : 'TRANSMITIR AUDITORIA'}
+                                    </button>
                                 </div>
                             )}
                         </main>
 
-                        <footer className="fixed bottom-0 left-0 right-0 p-6 glass border-t border-white/5 flex gap-4 bg-slate-950/95 z-50">
-                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-white/5 p-5 rounded-2xl font-black uppercase text-xs text-slate-400">Voltar</button>}
-                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-white text-black p-5 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Continuar Checklist</button>}
+                        <footer className="fixed bottom-0 left-0 right-0 p-5 t-panel border-t t-border flex gap-4 bg-[#0D121C] z-50">
+                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-gray-900 p-4 rounded text-xs font-bold uppercase text-gray-400">Voltar</button>}
+                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-gray-100 text-black p-4 rounded text-xs font-bold uppercase tracking-widest">Avançar</button>}
                         </footer>
                     </div>
                 );
             }
 
-            // --- VIEW: DASHBOARD DESKTOP/TV ---
+            // --- VIEW: MONITOR TV 32" (OPS CENTER) ---
             if (view === 'admin') return (
-                <div className="min-h-screen flex bg-[#020617] animate-fade">
-                    <aside className="w-24 bg-slate-900 border-r border-white/5 flex flex-col items-center py-10 gap-8">
-                        <div className="bg-red-600 p-4 rounded-2xl shadow-lg shadow-red-900/50"><i data-lucide="shield-check" className="text-white"></i></div>
-                        <button onClick={() => setTab('monitor')} className={`p-4 rounded-xl ${tab === 'monitor' ? 'bg-red-600 text-white' : 'text-slate-600'}`}><i data-lucide="layout-dashboard"></i></button>
-                        <button onClick={() => setTab('report')} className={`p-4 rounded-xl ${tab === 'report' ? 'bg-red-600 text-white' : 'text-slate-600'}`}><i data-lucide="file-text"></i></button>
-                        <button onClick={sync} className="p-4 text-slate-500 hover:text-white transition-all"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i></button>
-                        <button onClick={() => setView('menu')} className="mt-auto p-4 text-slate-700 hover:text-red-500 transition-all"><i data-lucide="log-out"></i></button>
+                <div className="min-h-screen flex bg-[#0A0F17] animate-fade">
+                    <aside className="w-20 bg-gray-900 border-r t-border flex flex-col items-center py-10 gap-6">
+                        <div className="bg-red-600 p-3 rounded-lg"><i data-lucide="radio" className="text-white w-6 h-6"></i></div>
+                        <button onClick={() => setTab('monitor')} className={`p-4 rounded ${tab === 'monitor' ? 'bg-red-950 text-red-500' : 'text-gray-600'}`}><i data-lucide="layout-grid"></i></button>
+                        <button onClick={() => setTab('report')} className={`p-4 rounded ${tab === 'report' ? 'bg-red-950 text-red-500' : 'text-gray-600'}`}><i data-lucide="clipboard-list"></i></button>
+                        <button onClick={sync} className="p-4 text-gray-700 hover:text-white"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i></button>
+                        <button onClick={() => setView('menu')} className="mt-auto p-4 text-gray-800 hover:text-red-500"><i data-lucide="log-out"></i></button>
                     </aside>
 
-                    <main className="flex-1 p-12 overflow-y-auto space-y-12">
+                    <main className="flex-1 p-10 overflow-y-auto space-y-12 no-scrollbar">
                         {tab === 'monitor' ? (
                             <>
-                                <header className="flex justify-between items-end border-b border-white/5 pb-10">
-                                    <div><h1 className="text-8xl font-black tracking-tighter uppercase italic text-white leading-none">Controle de <span className="text-red-600">Ambulâncias</span></h1><p className="text-slate-500 font-mono text-sm uppercase mt-4 tracking-[0.5em]">Checklist Geral</p></div>
-                                    <div className="glass p-12 rounded-[3rem] text-center min-w-[280px] border-t-8 border-emerald-500">
-                                        <span className="text-8xl font-black text-emerald-400 font-mono leading-none">{audit.op}%</span>
-                                        <p className="text-xs font-black text-slate-500 mt-4 tracking-widest uppercase italic">Conformidade Operacional</p>
+                                <header className="flex justify-between items-start border-b t-border pb-8">
+                                    <div><h1 className="text-5xl font-black tracking-tight uppercase text-white leading-tight">PRONTIDÃO <span className="text-red-600">SAE</span></h1><p className="text-gray-600 font-mono text-[11px] uppercase mt-2 tracking-[0.4em]">CENTRAL DE OPERAÇÕES - HACO</p></div>
+                                    <div className="t-panel p-8 rounded-lg text-center min-w-[200px] border-l-4 border-emerald-500">
+                                        <span className="text-7xl font-extrabold text-emerald-400 font-mono leading-none">{audit.op}%</span>
+                                        <p className="text-[10px] font-bold text-gray-600 mt-3 tracking-widest uppercase">Frota Operacional</p>
                                     </div>
                                 </header>
 
-                                <div className="grid grid-cols-3 gap-8">
+                                <div className="grid grid-cols-3 gap-6">
                                     {VIATURAS.map(v => (
-                                        <div key={v.id} className="glass p-8 rounded-[2.5rem] relative overflow-hidden border border-white/5">
-                                            <h4 className="text-sm font-black text-white uppercase tracking-widest mb-8 border-b border-white/5 pb-4 italic">{v.label}</h4>
-                                            <div className="space-y-6">
-                                                {['MANHÃ', 'TARDE', 'NOITE'].map(s => {
-                                                    const log = audit.shifts[v.label][s[0]];
+                                        <div key={v.id} className="t-panel p-6 rounded-lg relative overflow-hidden">
+                                            <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 border-b t-border pb-3">{v.label}</h4>
+                                            <div className="space-y-5">
+                                                {['M', 'T', 'N'].map(s => {
+                                                    const log = audit.shifts[v.label][s];
+                                                    const name = s === 'M' ? 'MANHÃ' : s === 'T' ? 'TARDE' : 'NOITE';
                                                     return (
                                                         <div key={s} className="flex justify-between items-center">
-                                                            <div><span className="block text-[10px] font-black text-slate-600 uppercase mb-1">{s}</span>{log?.ok && <span className="text-sm font-bold text-white uppercase italic underline decoration-red-600 tracking-tighter">{log.u}</span>}</div>
-                                                            <span className={`px-4 py-2 rounded-xl text-[10px] font-black ${log?.ok ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-500 animate-pulse'}`}>{log?.ok ? 'CHECK' : 'PENDENTE'}</span>
+                                                            <div><span className="block text-[10px] font-bold text-gray-600 uppercase tracking-wider">{name}</span>{log?.ok && <span className="text-xs font-semibold text-white uppercase tracking-tighter decoration-red-600 underline decoration-2">{log.u}</span>}</div>
+                                                            <i data-lucide={log?.ok ? 'check-circle' : 'circle-dashed'} className={`w-5 h-5 ${log?.ok ? 'text-emerald-500' : 'text-red-800 animate-pulse'}`}></i>
                                                         </div>
                                                     )
                                                 })}
@@ -349,65 +303,36 @@
                                         </div>
                                     ))}
                                 </div>
-
-                                <div className="glass p-12 rounded-[3.5rem] border border-red-900/30 relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[100px] rounded-full"></div>
-                                    <h3 className="text-sm font-black uppercase text-red-500 tracking-[0.5em] mb-10 flex items-center gap-4 italic"><i data-lucide="alert-triangle" className="animate-pulse"></i> Não Conformidades (NC) / Avarias / Reposições</h3>
-                                    <div className="grid grid-cols-2 gap-6 relative z-10">
-                                        {audit.alerts.map((a, i) => (
-                                            <div key={i} className="flex justify-between items-center p-6 bg-slate-950/80 rounded-3xl border border-white/5">
-                                                <div className="flex items-center gap-6 italic uppercase">
-                                                    <div className="bg-red-600/20 text-red-500 p-4 rounded-xl"><i data-lucide="activity"></i></div>
-                                                    <div><p className="text-lg font-black leading-none text-white">{a.i}</p><p className="text-xs text-red-400 mt-2 font-bold">{a.o}</p></div>
-                                                </div>
-                                                <div className="text-right font-mono"><p className="text-sm font-black text-slate-400">{a.r}</p><p className="text-xs text-slate-600 mt-1">{a.p}</p></div>
-                                            </div>
-                                        ))}
-                                        {audit.alerts.length === 0 && <div className="col-span-2 text-center py-10 opacity-20 font-black uppercase tracking-[1em] text-3xl">Padrão 100%</div>}
-                                    </div>
-                                </div>
                             </>
                         ) : (
                             <div className="space-y-12 animate-fade">
-                                <h1 className="text-6xl font-black text-white italic tracking-tighter uppercase leading-none">Relatório <span className="text-red-600 underline">Geral</span></h1>
-                                <div className="grid grid-cols-1 gap-6">
-                                    {audit.history.map((h, i) => (
-                                        <div key={i} className="glass p-8 rounded-3xl flex flex-col gap-6 border border-white/5 hover:bg-white/5 transition-all">
-                                            
-                                            {/* Cabeçalho da Auditoria */}
-                                            <div className="flex justify-between items-center w-full">
-                                                <div className="flex gap-10 items-center">
-                                                    <span className="text-slate-500 font-mono text-sm">{h.ts}</span>
-                                                    <span className="font-black text-white italic text-xl w-32">{h.v}</span>
-                                                    <div>
-                                                        <p className="text-red-500 font-bold uppercase">{h.r}</p>
-                                                        <p className="text-xs text-slate-500 font-mono mt-1">{h.p}</p>
-                                                    </div>
+                                <h1 className="text-5xl font-black text-white tracking-tight uppercase">Histórico de <span className="text-red-600">Auditoria</span></h1>
+                                <div className="space-y-6">
+                                    {audit.history.slice(0, 15).map((h, i) => (
+                                        <div key={i} className="t-panel p-8 rounded-lg flex flex-col gap-6 hover:bg-gray-900 transition-colors">
+                                            <div className="flex justify-between items-start w-full">
+                                                <div className="flex gap-8 items-center">
+                                                    <span className="text-gray-600 font-mono text-sm">{h.ts}</span>
+                                                    <span className="font-bold text-white text-lg w-28 uppercase tracking-tight">{h.v}</span>
+                                                    <div><p className="text-red-500 font-bold uppercase text-xs tracking-wider">{h.r}</p><p className="text-[11px] text-gray-600 font-mono mt-1">{h.p}</p></div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <span className={`px-4 py-2 rounded-xl text-xs font-black ${h.alertas.length === 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                                                        {h.alertas.length === 0 ? '100% CONFORME' : `${h.alertas.length} ALERTA(S) REGISTRADO(S)`}
-                                                    </span>
-                                                </div>
+                                                <div className={`px-4 py-2 rounded-sm text-[10px] font-black tracking-widest uppercase ${h.alertas.length === 0 ? 'bg-emerald-950 text-emerald-300' : 'bg-red-950 text-red-300'}`}>
+                                                    {h.alertas.length === 0 ? 'CONFORME' : `${h.alertas.length} NC(S) REGISTRADA(S)`}
+                                                </span>
                                             </div>
-
-                                            {/* Área de Detalhamento das Falhas */}
                                             {h.alertas.length > 0 && (
-                                                <div className="pt-5 border-t border-white/5 grid grid-cols-2 gap-4">
-                                                    {h.alertas.map((alerta, idx) => (
-                                                        <div key={idx} className="flex items-start gap-4 bg-red-950/20 p-4 rounded-2xl border border-red-900/30">
-                                                            <i data-lucide="alert-triangle" className="text-red-500 w-5 h-5 mt-0.5"></i>
+                                                <div className="pt-6 border-t t-border grid grid-cols-2 gap-4">
+                                                    {h.alertas.map((al, id) => (
+                                                        <div key={id} className="flex gap-4 bg-black/40 p-4 rounded border border-red-900/30">
+                                                            <i data-lucide="octagon-alert" className="text-red-500 w-5 h-5 mt-0.5"></i>
                                                             <div>
-                                                                <p className="text-xs font-black text-white uppercase">{alerta.nome}</p>
-                                                                <p className="text-[10px] text-red-400 font-bold uppercase mt-1.5">
-                                                                    [{alerta.status}] {alerta.obs ? `- ${alerta.obs}` : ''}
-                                                                </p>
+                                                                <p className="text-[11px] font-bold text-white uppercase">{al.nome}</p>
+                                                                <p className="text-[10px] text-red-400 font-bold uppercase mt-1">[{al.status}] - {al.obs}</p>
                                                             </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                             )}
-                                            
                                         </div>
                                     ))}
                                 </div>
@@ -418,10 +343,10 @@
             );
 
             if (view === 'sucesso') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-950 text-center animate-fade">
-                    <div className="w-32 h-32 bg-emerald-500/20 text-emerald-500 rounded-[3rem] flex items-center justify-center mb-10 animate-bounce border border-emerald-500/30"><i data-lucide="check-circle" className="w-16 h-16"></i></div>
-                    <h1 className="text-6xl font-black italic text-white uppercase tracking-tighter leading-none mb-12">AUDITORIA<br/>REGISTRADA</h1>
-                    <button onClick={() => { setView('menu'); window.location.reload(); }} className="w-full max-w-xs bg-white text-black font-black py-8 rounded-[2.5rem] shadow-2xl uppercase tracking-[0.2em] text-xs active:scale-95 transition-all">Voltar à Base</button>
+                <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-[#0A0F17] text-center animate-fade">
+                    <div className="w-24 h-24 bg-emerald-950 text-emerald-500 rounded-full flex items-center justify-center mb-10 border border-emerald-800 animate-pulse"><i data-lucide="check-circle-2" className="w-12 h-12"></i></div>
+                    <h1 className="text-5xl font-extrabold text-white uppercase tracking-tighter leading-none mb-10">DADOS<br/>ENVIADOS</h1>
+                    <button onClick={() => { setView('menu'); window.location.reload(); }} className="w-full max-w-xs bg-gray-100 text-black font-bold py-6 rounded active:scale-95 transition-all text-xs uppercase tracking-widest">Nova Auditoria</button>
                 </div>
             );
         }
