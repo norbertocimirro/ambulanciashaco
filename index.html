@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - SISTEMA SAE (V19.0 TACTICAL)</title>
+    <title>HACO - SISTEMA SAE (V19.1 TACTICAL)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -25,11 +25,9 @@
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-obsidian); color: var(--text-primary); overflow-x: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* Tactical Panel Style */
         .t-panel { background-color: var(--panel-obsidian); border: 1px solid rgba(255, 255, 255, 0.03); }
         .t-border { border-color: rgba(255, 255, 255, 0.05); }
 
-        /* Hard Button Style */
         .btn-t-primary { background-color: var(--fab-red); transition: all 0.1s ease-in-out; border-bottom: 3px solid rgba(0,0,0,0.3); }
         .btn-t-primary:active { transform: translateY(1px); border-bottom-width: 1px; }
         
@@ -45,7 +43,7 @@
         const { useState, useEffect, useMemo } = React;
 
         // ⚠️ COLE SUA URL AQUI ⚠️
-        const API_URL = "SUA_URL_AQUI";
+        const API_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec";
 
         const VIATURAS = [
             { id: 'basica', label: 'Básica', bg: 'bg-blue-950', border: 'border-blue-700', tColor: 'text-blue-400' },
@@ -55,26 +53,20 @@
 
         const CATEGORIES = ["Status & VA", "Mochila Vermelha", "Meds & DEA", "Gases & Trauma", "Balcão & Finalizar"];
 
-        // MATRIZ COMPLETA TÁTICA (Consolidada para agilidade mobile)
         const CHECKLIST = [
-            // cat 0: Admin & VA
             { id: 'radio', n: 'Rádio Comunicador', cat: 0, opts: ['OK', 'FA'] },
             { id: 'carimbo', n: 'Carimbo da Viatura', cat: 0, opts: ['OK', 'FA'] },
             { id: 'bvm_kits', n: 'AMBU/BVM (Ad/Ped/Neo)', cat: 0, opts: ['OK', 'FA'] },
             { id: 'guedel_kit', n: 'Cânulas Guedel (Completo)', cat: 0, opts: ['OK', 'FALTA'] },
-            // cat 1: Mochila Vermelha
             { id: 'sinais_kit', n: 'Kit Sinais Vitais (Esteto/Esfig/HGT/Oxi)', cat: 1, opts: ['OK', 'FA'] },
             { id: 'bolso_b_kit', n: 'Nebul/Sondas/Óculos/Aspiração', cat: 1, opts: ['OK', 'FA'] },
             { id: 'trauma_kit', n: 'Ataduras/Gaze/Torniquete/Manta', cat: 1, opts: ['OK', 'FA'] },
-            // cat 2: Meds & DEA
             { id: 'med_geral', n: 'Medicação Geral', cat: 2, opts: ['COMPLETA', 'FA'] },
             { id: 'med_ctrl', n: 'Meds Controladas', cat: 2, opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
             { id: 'dea_kit', n: 'DEA (Status/Pás Ad-Ped/Pilhas)', cat: 2, opts: ['OK', 'FA'] },
-            // cat 3: Gases & Trauma
             { id: 'o2_g_kit', n: 'O2 Grande (Torpedo 1 e 2)', cat: 3, opts: ['LACRADO', 'MC>20', 'TROCA', 'FA'] },
             { id: 'o2_p_kit', n: 'O2 Portátil (Torpedo 1 e 2)', cat: 3, opts: ['LACRADO', 'MC>40', 'TROCA', 'FA'] },
             { id: 'imob_kit', n: 'Imobilização Trauma (Ked/Talas/Maca/Velcros)', cat: 3, opts: ['OK', 'FA'] },
-            // cat 4: Balcão & Finalizar
             { id: 'parede_kit', n: 'Flux/ Hudson/ Aspiração Parede', cat: 4, opts: ['OK', 'FA'] },
             { id: 'cobertor', n: 'Cobertor (1 un)', cat: 4, opts: ['OK', 'FA'] },
             { id: 'colares_kit', n: 'Colares Cervicais (Completo)', cat: 4, opts: ['OK', 'FALTA'] },
@@ -92,7 +84,6 @@
 
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step, db, tab]);
 
-            // --- CÉREBRO TÁTICO ---
             const audit = useMemo(() => {
                 if (!db.length) return { op: 0, shifts: {}, history: [] };
                 
@@ -134,7 +125,6 @@
                 };
             }, [db]);
 
-            // --- OPERAÇÕES ---
             const start = (v) => {
                 const items = {};
                 CHECKLIST.forEach(i => items[i.id] = { status: i.opts[0], obs: '' });
@@ -177,7 +167,6 @@
                 setLoading(false);
             };
 
-            // --- VIEW: MENU TÁTICO ---
             if (view === 'menu') return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-16 animate-fade bg-[#0A0F17]">
                     <div className="text-center space-y-3">
@@ -197,7 +186,6 @@
                 </div>
             );
 
-            // --- VIEW: COLETOR MOBILE (TACTICAL UI) ---
             if (view === 'form') {
                 const isFinal = step === CATEGORIES.length - 1;
                 const items = CHECKLIST.filter(i => i.cat === step);
@@ -262,7 +250,6 @@
                 );
             }
 
-            // --- VIEW: MONITOR TV 32" (OPS CENTER) ---
             if (view === 'admin') return (
                 <div className="min-h-screen flex bg-[#0A0F17] animate-fade">
                     <aside className="w-20 bg-gray-900 border-r t-border flex flex-col items-center py-10 gap-6">
@@ -318,7 +305,7 @@
                                                 </div>
                                                 <div className={`px-4 py-2 rounded-sm text-[10px] font-black tracking-widest uppercase ${h.alertas.length === 0 ? 'bg-emerald-950 text-emerald-300' : 'bg-red-950 text-red-300'}`}>
                                                     {h.alertas.length === 0 ? 'CONFORME' : `${h.alertas.length} NC(S) REGISTRADA(S)`}
-                                                </span>
+                                                </div>
                                             </div>
                                             {h.alertas.length > 0 && (
                                                 <div className="pt-6 border-t t-border grid grid-cols-2 gap-4">
