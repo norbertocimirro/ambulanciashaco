@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - SISTEMA SAE (V20.0 TACTICAL)</title>
+    <title>HACO - SISTEMA SAE (V20.1 CLÍNICO)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -13,20 +13,19 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
         
         :root {
-            --bg-obsidian: #0A0F17;
-            --panel-obsidian: #111827;
+            --bg-base: #F8FAFC; /* slate-50 */
+            --panel-base: #FFFFFF;
             --fab-red: #DC2626;
-            --rescue-green: #10B981;
-            --text-primary: #F3F4F6;
+            --text-primary: #0F172A; /* slate-900 */
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-obsidian); color: var(--text-primary); overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: var(--text-primary); overflow-x: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        .t-panel { background-color: var(--panel-obsidian); border: 1px solid rgba(255, 255, 255, 0.03); }
-        .t-border { border-color: rgba(255, 255, 255, 0.05); }
+        .t-panel { background-color: var(--panel-base); border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); }
+        .t-border { border-color: #E2E8F0; }
 
-        .btn-t-primary { background-color: var(--fab-red); transition: all 0.1s ease-in-out; border-bottom: 3px solid rgba(0,0,0,0.3); }
+        .btn-t-primary { background-color: var(--fab-red); transition: all 0.1s ease-in-out; border-bottom: 3px solid rgba(0,0,0,0.1); }
         .btn-t-primary:active { transform: translateY(1px); border-bottom-width: 1px; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -41,45 +40,39 @@
         const { useState, useEffect, useMemo } = React;
 
         // ⚠️ COLE SUA URL AQUI ⚠️
-        const API_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec";
+        const API_URL = "SUA_URL_AQUI";
 
-        // PERFIS DE VIATURAS
+        // PERFIS DE VIATURAS (Cores adaptadas para fundo claro)
         const VIATURAS = [
-            { id: 'basica_upi', label: 'Básica (UPI)', bg: 'bg-blue-950', border: 'border-blue-700', tColor: 'text-blue-400' },
-            { id: 'avancada_upa', label: 'Avançada (UPA)', bg: 'bg-rose-950', border: 'border-rose-700', tColor: 'text-rose-400' },
-            { id: 'avancada_paje', label: 'Avançada (Pajé)', bg: 'bg-emerald-950', border: 'border-emerald-700', tColor: 'text-emerald-400' }
+            { id: 'basica_upi', label: 'Básica (UPI)', bg: 'bg-blue-50', border: 'border-blue-500', tColor: 'text-blue-800' },
+            { id: 'avancada_upa', label: 'Avançada (UPA)', bg: 'bg-rose-50', border: 'border-rose-500', tColor: 'text-rose-800' },
+            { id: 'avancada_paje', label: 'Avançada (Pajé)', bg: 'bg-emerald-50', border: 'border-emerald-500', tColor: 'text-emerald-800' }
         ];
 
         const CATEGORIES = ["Status & Viaturas", "Módulos de Suporte", "Medicação & DEA", "Gases Medicinais & Trauma", "Armários & Finalizar"];
 
-        // MATRIZ INTELIGENTE (O 'vias' define onde o item aparece)
         const CHECKLIST = [
-            // cat 0: Admin
             { id: 'radio', n: 'Rádio Comunicador / Celular', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'carimbo', n: 'Carimbo da Viatura', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'bvm_kits', n: 'AMBU/BVM (Adulto/Ped/Neo)', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             
-            // cat 1: Módulos (Baseado nas fotos da UPI e PAJÉ)
             { id: 'mod_epi', n: 'Módulo: EPI', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_sv', n: 'Módulo: SINAIS VITAIS', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_curativo', n: 'Módulo: CURATIVO', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_hemo', n: 'Módulo: CONTROLE HEMORRAGIA', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_va', n: 'Módulo: VIA AÉREA', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_calor', n: 'Módulo: CALOR', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'mod_sutura', n: 'Módulo: SUTURA', cat: 1, vias: ['avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }, // Só nas Avançadas
-            { id: 'mod_puncao', n: 'Módulo: PUNÇÃO', cat: 1, vias: ['avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }, // Só nas Avançadas
+            { id: 'mod_sutura', n: 'Módulo: SUTURA', cat: 1, vias: ['avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_puncao', n: 'Módulo: PUNÇÃO', cat: 1, vias: ['avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             
-            // cat 2: Meds & DEA
             { id: 'med_geral', n: 'Medicação Geral', cat: 2, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['COMPLETA', 'FA'] },
-            { id: 'med_ctrl', n: 'Medicações Controladas', cat: 2, vias: ['avancada_upa', 'avancada_paje'], opts: ['C/ LACRE', 'S/ LACRE', 'FA'] }, // Só nas Avançadas
+            { id: 'med_ctrl', n: 'Medicações Controladas', cat: 2, vias: ['avancada_upa', 'avancada_paje'], opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
             { id: 'dea_kit', n: 'DEA (Pás Ad/Ped e Pilhas)', cat: 2, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
             
-            // cat 3: Gases & Trauma
             { id: 'o2_g', n: 'O2 Grande (Torpedo 1 e 2)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['LACRADO', 'MC>20', 'TROCA', 'FA'] },
             { id: 'o2_p', n: 'O2 Portátil (Torpedo 1 e 2)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['LACRADO', 'MC>40', 'TROCA', 'FA'] },
             { id: 'imob_kit', n: 'Trauma (KED/Maca/Talas/Velcros)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             
-            // cat 4: Parede, Armários e Finalizar
             { id: 'parede_kit', n: 'Fluxômetros / Aspiração Parede', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'colares_kit', n: 'Colares Cervicais (Todos)', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FALTA'] },
             { id: 'gaveta_kit', n: 'Chave O2 / Carr. Oxim. / Lanterna', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }
@@ -139,7 +132,6 @@
 
             const start = (v) => {
                 const items = {};
-                // Inicia o form apenas com os itens pertinentes à viatura escolhida
                 CHECKLIST.filter(i => i.vias.includes(v.id)).forEach(i => items[i.id] = { status: i.opts[0], obs: '' });
                 setForm({ placa: '', posto: '', guerra: '', obs: '', items });
                 setVSel(v);
@@ -181,86 +173,83 @@
             };
 
             if (view === 'menu') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-16 animate-fade bg-[#0A0F17]">
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-16 animate-fade bg-slate-50">
                     <div className="text-center space-y-3">
-                        <div className="bg-red-600 w-16 h-16 rounded-lg flex items-center justify-center mx-auto shadow-xl"><i data-lucide="shield-check" className="text-white w-8 h-8"></i></div>
-                        <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white">SISTEMA <span className="text-red-600">SAE</span></h1>
-                        <p className="text-gray-500 font-mono text-[10px] uppercase tracking-[0.5em]">Hospital de Aeronáutica de Canoas</p>
+                        <div className="bg-red-600 w-16 h-16 rounded-lg flex items-center justify-center mx-auto shadow-lg"><i data-lucide="shield-check" className="text-white w-8 h-8"></i></div>
+                        <h1 className="text-4xl font-extrabold uppercase tracking-tight text-slate-900">SISTEMA <span className="text-red-600">SAE</span></h1>
+                        <p className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.5em]">Hospital de Aeronáutica de Canoas</p>
                     </div>
                     <div className="grid grid-cols-1 gap-5 w-full max-w-sm">
                         {VIATURAS.map(v => (
-                            <button key={v.id} onClick={() => start(v)} className={`t-panel p-6 rounded-lg flex items-center justify-between transition-all border border-l-4 hover:border-red-600 ${v.border}`}>
+                            <button key={v.id} onClick={() => start(v)} className={`t-panel p-6 rounded-lg flex items-center justify-between transition-all border-l-4 hover:border-red-600 ${v.border}`}>
                                 <span className={`font-bold text-lg uppercase tracking-tight ${v.tColor}`}>{v.label}</span>
-                                <i data-lucide="truck" className="text-gray-600 w-5 h-5"></i>
+                                <i data-lucide="truck" className="text-slate-400 w-5 h-5"></i>
                             </button>
                         ))}
                     </div>
-                    <button onClick={sync} className="text-gray-700 font-bold uppercase text-[10px] tracking-widest pt-10 border-t t-border w-full max-w-xs hover:text-red-500">Ops Center (TV/Desktop)</button>
+                    <button onClick={sync} className="text-slate-500 font-bold uppercase text-[10px] tracking-widest pt-10 border-t border-slate-200 w-full max-w-xs hover:text-red-600">Ops Center (TV/Desktop)</button>
                 </div>
             );
 
             if (view === 'form') {
                 const isFinal = step === CATEGORIES.length - 1;
-                // Filtra os itens do passo atual que pertencem à viatura escolhida
                 const items = CHECKLIST.filter(i => i.cat === step && i.vias.includes(vSel.id));
                 
-                // Lógica de alteração do título da Categoria para a UPA
                 let categoryName = CATEGORIES[step];
                 if (step === 1) {
                     categoryName = vSel.id === 'avancada_upa' ? 'Módulos (Displays da Ambulância)' : 'Mochila de Transporte (Modular)';
                 }
 
                 return (
-                    <div className="min-h-screen flex flex-col bg-[#0A0F17] pb-32 animate-fade">
-                        <header className={`p-5 ${vSel.bg} flex justify-between items-center sticky top-0 z-50 rounded-b-lg shadow-xl`}>
-                            <button onClick={() => setView('menu')} className="text-white opacity-60"><i data-lucide="arrow-left"></i></button>
-                            <h1 className="font-bold uppercase text-xs text-white tracking-widest">{vSel.label}</h1>
-                            <span className="font-mono text-[10px] font-bold text-white bg-black/40 px-3 py-1 rounded">{step + 1}/{CATEGORIES.length}</span>
+                    <div className="min-h-screen flex flex-col bg-slate-50 pb-32 animate-fade">
+                        <header className={`p-5 ${vSel.bg} border-b ${vSel.border} flex justify-between items-center sticky top-0 z-50 shadow-sm`}>
+                            <button onClick={() => setView('menu')} className={`${vSel.tColor}`}><i data-lucide="arrow-left"></i></button>
+                            <h1 className={`font-bold uppercase text-xs tracking-widest ${vSel.tColor}`}>{vSel.label}</h1>
+                            <span className={`font-mono text-[10px] font-bold px-2 py-1 rounded bg-white/50 ${vSel.tColor}`}>{step + 1}/{CATEGORIES.length}</span>
                         </header>
 
                         <main className="p-4 space-y-6 flex-1 overflow-y-auto no-scrollbar mt-4">
-                            <h2 className="text-sm font-black uppercase text-red-500 tracking-wider mb-8 flex items-center gap-3"><i data-lucide="tag" className="w-4 h-4"></i> {categoryName}</h2>
+                            <h2 className="text-sm font-black uppercase text-red-600 tracking-wider mb-8 flex items-center gap-3"><i data-lucide="tag" className="w-4 h-4"></i> {categoryName}</h2>
 
                             {step === 0 && (
-                                <div className="space-y-5 t-panel p-6 rounded-lg shadow-lg">
-                                    <input type="text" placeholder="PLACA DO VEÍCULO" className="w-full p-4 bg-black/30 border t-border rounded font-mono font-bold text-center text-xl uppercase text-white placeholder:text-gray-700 focus:border-red-600 outline-none" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                <div className="space-y-4 t-panel p-6 rounded-lg">
+                                    <input type="text" placeholder="PLACA DO VEÍCULO" className="w-full p-4 bg-white border border-slate-200 rounded font-mono font-bold text-center text-xl uppercase text-slate-900 placeholder:text-slate-400 focus:border-red-600 outline-none" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
                                     <div className="grid grid-cols-2 gap-3">
-                                        <input type="text" placeholder="POSTO (1T/SG)" className="w-full p-3 bg-black/30 border t-border rounded font-bold uppercase text-white placeholder:text-gray-700 text-xs focus:border-red-600 outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
-                                        <input type="text" placeholder="GUERRA" className="w-full p-3 bg-black/30 border t-border rounded font-bold uppercase text-white placeholder:text-gray-700 text-xs focus:border-red-600 outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="POSTO (1T/SG)" className="w-full p-3 bg-white border border-slate-200 rounded font-bold uppercase text-slate-900 placeholder:text-slate-400 text-xs focus:border-red-600 outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="GUERRA" className="w-full p-3 bg-white border border-slate-200 rounded font-bold uppercase text-slate-900 placeholder:text-slate-400 text-xs focus:border-red-600 outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
                                     </div>
                                 </div>
                             )}
 
                             {items.map(i => (
-                                <div key={i.id} className="t-panel p-5 rounded-lg space-y-4 shadow-md border-b-2 border-transparent hover:border-red-900 transition-colors">
-                                    <span className="font-bold text-[11px] uppercase tracking-wider text-gray-400 block">{i.n}</span>
+                                <div key={i.id} className="t-panel p-5 rounded-lg space-y-4">
+                                    <span className="font-bold text-[11px] uppercase tracking-wider text-slate-600 block">{i.n}</span>
                                     <div className="flex flex-wrap gap-2 pt-1">
                                         {i.opts.map(opt => {
                                             const isF = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(opt);
                                             return (
                                                 <button key={opt} onClick={() => setForm({...form, items: {...form.items, [i.id]: { ...form.items[i.id], status: opt }}})} 
-                                                    className={`px-4 py-2.5 rounded-sm font-bold text-[10px] flex-1 transition-all border ${form.items[i.id].status === opt ? (isF ? 'bg-red-950 border-red-600 text-red-200' : 'bg-emerald-950 border-emerald-600 text-emerald-200') : 'bg-gray-900 text-gray-500 border-gray-800'}`}>
+                                                    className={`px-4 py-2.5 rounded font-bold text-[10px] flex-1 transition-all border ${form.items[i.id].status === opt ? (isF ? 'bg-red-600 border-red-700 text-white shadow-md' : 'bg-emerald-600 border-emerald-700 text-white shadow-md') : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'}`}>
                                                     {opt}
                                                 </button>
                                             )
                                         })}
                                     </div>
-                                    <input type="text" placeholder="Anotar NC / Número Lacre..." className={`w-full p-3 bg-black/30 rounded text-xs text-gray-300 placeholder:text-gray-700 border-none outline-none focus:ring-1 focus:ring-red-600 ${['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(form.items[i.id].status) ? 'bg-red-950/20 italic placeholder:text-red-950' : ''}`} value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
+                                    <input type="text" placeholder="Anotar NC / Número Lacre..." className={`w-full p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-red-500 ${['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(form.items[i.id].status) ? 'bg-red-50 border-red-200 placeholder:text-red-400 text-red-900 italic' : ''}`} value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
                                 </div>
                             ))}
                             
-                            {/* Se o passo estiver vazio para este perfil, mostra aviso rápido */}
                             {items.length === 0 && !isFinal && step !== 0 && (
-                                <div className="text-center p-10 border border-dashed t-border rounded-lg opacity-50">
-                                    <p className="font-bold text-gray-500 text-xs uppercase tracking-widest">Sem itens operacionais para esta viatura nesta etapa.</p>
+                                <div className="text-center p-10 border border-dashed border-slate-300 rounded-lg bg-slate-100">
+                                    <p className="font-bold text-slate-500 text-xs uppercase tracking-widest">Sem itens operacionais para esta viatura nesta etapa.</p>
                                 </div>
                             )}
 
                             {isFinal && (
                                 <div className="space-y-8 animate-fade mt-6">
                                     <div className="t-panel p-6 rounded-lg">
-                                        <h3 className="font-bold text-gray-400 text-xs uppercase mb-3 tracking-wider">Observações Gerais do Plantão</h3>
-                                        <textarea rows="4" placeholder="Descreva intercorrências da viatura, manutenções necessárias ou pendências..." className="w-full p-4 bg-black/30 rounded text-gray-300 text-xs outline-none focus:ring-1 focus:ring-red-600 placeholder:text-gray-700" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
+                                        <h3 className="font-bold text-slate-500 text-xs uppercase mb-3 tracking-wider">Observações Gerais do Plantão</h3>
+                                        <textarea rows="4" placeholder="Descreva intercorrências da viatura, manutenções necessárias ou pendências..." className="w-full p-4 bg-slate-50 border border-slate-200 rounded text-slate-900 text-xs outline-none focus:border-red-500 placeholder:text-slate-400" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
                                     </div>
                                     <button onClick={send} disabled={loading} className="w-full btn-t-primary text-white font-bold py-5 rounded-lg active:scale-95 text-xs uppercase tracking-widest">
                                         {loading ? 'SINCRONIZANDO...' : 'TRANSMITIR AUDITORIA'}
@@ -269,47 +258,47 @@
                             )}
                         </main>
 
-                        <footer className="fixed bottom-0 left-0 right-0 p-5 t-panel border-t t-border flex gap-4 bg-[#0D121C] z-50">
-                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-gray-900 p-4 rounded text-xs font-bold uppercase text-gray-400">Voltar</button>}
-                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-gray-100 text-black p-4 rounded text-xs font-bold uppercase tracking-widest">Avançar</button>}
+                        <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 flex gap-4 z-50">
+                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-slate-100 p-4 rounded text-xs font-bold uppercase text-slate-600 hover:bg-slate-200">Voltar</button>}
+                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-slate-900 text-white p-4 rounded text-xs font-bold uppercase tracking-widest hover:bg-slate-800">Avançar</button>}
                         </footer>
                     </div>
                 );
             }
 
             if (view === 'admin') return (
-                <div className="min-h-screen flex bg-[#0A0F17] animate-fade">
-                    <aside className="w-20 bg-gray-900 border-r t-border flex flex-col items-center py-10 gap-6">
+                <div className="min-h-screen flex bg-slate-50 animate-fade">
+                    <aside className="w-20 bg-white border-r border-slate-200 flex flex-col items-center py-10 gap-6">
                         <div className="bg-red-600 p-3 rounded-lg"><i data-lucide="radio" className="text-white w-6 h-6"></i></div>
-                        <button onClick={() => setTab('monitor')} className={`p-4 rounded ${tab === 'monitor' ? 'bg-red-950 text-red-500' : 'text-gray-600'}`}><i data-lucide="layout-grid"></i></button>
-                        <button onClick={() => setTab('report')} className={`p-4 rounded ${tab === 'report' ? 'bg-red-950 text-red-500' : 'text-gray-600'}`}><i data-lucide="clipboard-list"></i></button>
-                        <button onClick={sync} className="p-4 text-gray-700 hover:text-white"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i></button>
-                        <button onClick={() => setView('menu')} className="mt-auto p-4 text-gray-800 hover:text-red-500"><i data-lucide="log-out"></i></button>
+                        <button onClick={() => setTab('monitor')} className={`p-4 rounded ${tab === 'monitor' ? 'bg-red-50 text-red-600' : 'text-slate-400 hover:text-slate-600'}`}><i data-lucide="layout-grid"></i></button>
+                        <button onClick={() => setTab('report')} className={`p-4 rounded ${tab === 'report' ? 'bg-red-50 text-red-600' : 'text-slate-400 hover:text-slate-600'}`}><i data-lucide="clipboard-list"></i></button>
+                        <button onClick={sync} className="p-4 text-slate-400 hover:text-slate-600"><i data-lucide="refresh-cw" className={loading ? 'animate-spin' : ''}></i></button>
+                        <button onClick={() => setView('menu')} className="mt-auto p-4 text-slate-400 hover:text-red-600"><i data-lucide="log-out"></i></button>
                     </aside>
 
                     <main className="flex-1 p-10 overflow-y-auto space-y-12 no-scrollbar">
                         {tab === 'monitor' ? (
                             <>
-                                <header className="flex justify-between items-start border-b t-border pb-8">
-                                    <div><h1 className="text-5xl font-black tracking-tight uppercase text-white leading-tight">PRONTIDÃO <span className="text-red-600">SAE</span></h1><p className="text-gray-600 font-mono text-[11px] uppercase mt-2 tracking-[0.4em]">CENTRAL DE OPERAÇÕES - HACO</p></div>
+                                <header className="flex justify-between items-start border-b border-slate-200 pb-8">
+                                    <div><h1 className="text-5xl font-black tracking-tight uppercase text-slate-900 leading-tight">PRONTIDÃO <span className="text-red-600">SAE</span></h1><p className="text-slate-500 font-mono text-[11px] uppercase mt-2 tracking-[0.4em]">CENTRAL DE OPERAÇÕES - HACO</p></div>
                                     <div className="t-panel p-8 rounded-lg text-center min-w-[200px] border-l-4 border-emerald-500">
-                                        <span className="text-7xl font-extrabold text-emerald-400 font-mono leading-none">{audit.op}%</span>
-                                        <p className="text-[10px] font-bold text-gray-600 mt-3 tracking-widest uppercase">Frota Operacional</p>
+                                        <span className="text-7xl font-extrabold text-emerald-500 font-mono leading-none">{audit.op}%</span>
+                                        <p className="text-[10px] font-bold text-slate-500 mt-3 tracking-widest uppercase">Frota Operacional</p>
                                     </div>
                                 </header>
 
                                 <div className="grid grid-cols-3 gap-6">
                                     {VIATURAS.map(v => (
                                         <div key={v.id} className="t-panel p-6 rounded-lg relative overflow-hidden">
-                                            <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6 border-b t-border pb-3">{v.label}</h4>
+                                            <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest mb-6 border-b border-slate-100 pb-3">{v.label}</h4>
                                             <div className="space-y-5">
                                                 {['M', 'T', 'N'].map(s => {
                                                     const log = audit.shifts[v.label][s];
                                                     const name = s === 'M' ? 'MANHÃ' : s === 'T' ? 'TARDE' : 'NOITE';
                                                     return (
                                                         <div key={s} className="flex justify-between items-center">
-                                                            <div><span className="block text-[10px] font-bold text-gray-600 uppercase tracking-wider">{name}</span>{log?.ok && <span className="text-xs font-semibold text-white uppercase tracking-tighter decoration-red-600 underline decoration-2">{log.u}</span>}</div>
-                                                            <i data-lucide={log?.ok ? 'check-circle' : 'circle-dashed'} className={`w-5 h-5 ${log?.ok ? 'text-emerald-500' : 'text-red-800 animate-pulse'}`}></i>
+                                                            <div><span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">{name}</span>{log?.ok && <span className="text-xs font-bold text-slate-900 uppercase tracking-tighter decoration-red-600 underline decoration-2">{log.u}</span>}</div>
+                                                            <i data-lucide={log?.ok ? 'check-circle' : 'circle-dashed'} className={`w-5 h-5 ${log?.ok ? 'text-emerald-500' : 'text-slate-300'}`}></i>
                                                         </div>
                                                     )
                                                 })}
@@ -320,28 +309,28 @@
                             </>
                         ) : (
                             <div className="space-y-12 animate-fade">
-                                <h1 className="text-5xl font-black text-white tracking-tight uppercase">Histórico de <span className="text-red-600">Auditoria</span></h1>
+                                <h1 className="text-5xl font-black text-slate-900 tracking-tight uppercase">Histórico de <span className="text-red-600">Auditoria</span></h1>
                                 <div className="space-y-6">
                                     {audit.history.slice(0, 15).map((h, i) => (
-                                        <div key={i} className="t-panel p-8 rounded-lg flex flex-col gap-6 hover:bg-gray-900 transition-colors">
+                                        <div key={i} className="t-panel p-8 rounded-lg flex flex-col gap-6">
                                             <div className="flex justify-between items-start w-full">
                                                 <div className="flex gap-8 items-center">
-                                                    <span className="text-gray-600 font-mono text-sm">{h.ts}</span>
-                                                    <span className="font-bold text-white text-lg w-32 uppercase tracking-tight">{h.v}</span>
-                                                    <div><p className="text-red-500 font-bold uppercase text-xs tracking-wider">{h.r}</p><p className="text-[11px] text-gray-600 font-mono mt-1">{h.p}</p></div>
+                                                    <span className="text-slate-500 font-mono text-sm">{h.ts}</span>
+                                                    <span className="font-bold text-slate-900 text-lg w-32 uppercase tracking-tight">{h.v}</span>
+                                                    <div><p className="text-red-600 font-bold uppercase text-xs tracking-wider">{h.r}</p><p className="text-[11px] text-slate-500 font-mono mt-1">{h.p}</p></div>
                                                 </div>
-                                                <div className={`px-4 py-2 rounded-sm text-[10px] font-black tracking-widest uppercase ${h.alertas.length === 0 ? 'bg-emerald-950 text-emerald-300' : 'bg-red-950 text-red-300'}`}>
+                                                <div className={`px-4 py-2 rounded text-[10px] font-black tracking-widest uppercase ${h.alertas.length === 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                                                     {h.alertas.length === 0 ? 'CONFORME' : `${h.alertas.length} NC(S) REGISTRADA(S)`}
                                                 </div>
                                             </div>
                                             {h.alertas.length > 0 && (
-                                                <div className="pt-6 border-t t-border grid grid-cols-2 gap-4">
+                                                <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
                                                     {h.alertas.map((al, id) => (
-                                                        <div key={id} className="flex gap-4 bg-black/40 p-4 rounded border border-red-900/30">
+                                                        <div key={id} className="flex gap-4 bg-slate-50 p-4 rounded border border-red-200">
                                                             <i data-lucide="octagon-alert" className="text-red-500 w-5 h-5 mt-0.5"></i>
                                                             <div>
-                                                                <p className="text-[11px] font-bold text-white uppercase">{al.nome}</p>
-                                                                <p className="text-[10px] text-red-400 font-bold uppercase mt-1">[{al.status}] - {al.obs}</p>
+                                                                <p className="text-[11px] font-bold text-slate-900 uppercase">{al.nome}</p>
+                                                                <p className="text-[10px] text-red-600 font-bold uppercase mt-1">[{al.status}] - {al.obs}</p>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -357,10 +346,10 @@
             );
 
             if (view === 'sucesso') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-[#0A0F17] text-center animate-fade">
-                    <div className="w-24 h-24 bg-emerald-950 text-emerald-500 rounded-full flex items-center justify-center mb-10 border border-emerald-800 animate-pulse"><i data-lucide="check-circle-2" className="w-12 h-12"></i></div>
-                    <h1 className="text-5xl font-extrabold text-white uppercase tracking-tighter leading-none mb-10">DADOS<br/>ENVIADOS</h1>
-                    <button onClick={() => { setView('menu'); window.location.reload(); }} className="w-full max-w-xs bg-gray-100 text-black font-bold py-6 rounded active:scale-95 transition-all text-xs uppercase tracking-widest">Nova Auditoria</button>
+                <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 text-center animate-fade">
+                    <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-10 border border-emerald-200"><i data-lucide="check-circle-2" className="w-12 h-12"></i></div>
+                    <h1 className="text-5xl font-extrabold text-slate-900 uppercase tracking-tighter leading-none mb-10">DADOS<br/>ENVIADOS</h1>
+                    <button onClick={() => { setView('menu'); window.location.reload(); }} className="w-full max-w-xs bg-slate-900 text-white font-bold py-5 rounded active:scale-95 transition-all text-xs uppercase tracking-widest">Nova Auditoria</button>
                 </div>
             );
         }
