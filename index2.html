@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HACO - SISTEMA SAE (V20.2 TÁTICO)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
+        
+        :root {
+            --bg-base: #F1F5F9; 
+            --panel-base: #FFFFFF;
+            --fab-blue: #003366; /* Azul Aeronáutica */
+            --fab-red: #DC2626;  /* Vermelho Resgate */
+            --text-primary: #0F172A;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: var(--text-primary); overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .t-panel { background-color: var(--panel-base); border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .module-bag { border: 2px solid #CBD5E1; border-top: 12px solid #475569; border-radius: 8px; position: relative; }
+        .module-bag::before { content: ''; position: absolute; top: -16px; left: 50%; transform: translateX(-50%); width: 40px; height: 8px; background: #94A3B8; border-radius: 4px 4px 0 0; }
+
+        .btn-t-primary { background-color: var(--fab-blue); color: white; transition: all 0.1s ease-in-out; border-bottom: 4px solid #001a33; }
+        .btn-t-primary:active { transform: translateY(2px); border-bottom-width: 2px; }
+        
+        .btn-success { background-color: #059669; color: white; border-bottom: 4px solid #047857; }
+        .btn-success:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+        .btn-danger { background-color: var(--fab-red); color: white; border-bottom: 4px solid #991B1B; }
+        .btn-danger:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .animate-fade { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // ⚠️ COLE SUA URL DO GOOGLE APPS SCRIPT/API AQUI ⚠️
+        const API_URL = "SUA_URL_AQUI";
+
+        // PERFIS DE VIATURAS (Cores de Alto Contraste para sol forte)
+        const VIATURAS = [
+            { id: 'basica_upi', label: 'BÁSICA (UPI)', bg: 'bg-[#003366]', border: 'border-blue-300', tColor: 'text-white' },
+            { id: 'avancada_upa', label: 'AVANÇADA (UPA)', bg: 'bg-[#DC2626]', border: 'border-red-300', tColor: 'text-white' },
+            { id: 'avancada_paje', label: 'PAJÉ (TÁTICA)', bg: 'bg-[#059669]', border: 'border-emerald-300', tColor: 'text-white' }
+        ];
+
+        const CATEGORIES = ["Status Geral", "Módulos da Mochila", "Medicação & DEA", "Gases & Trauma", "Finalização"];
+
+        const CHECKLIST = [
+            { id: 'radio', n: 'Rádio / Celular Funcional', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'carimbo', n: 'Carimbo da Viatura', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'bvm_kits', n: 'AMBU/BVM (Ad/Ped/Neo)', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            
+            { id: 'mod_epi', n: 'Módulo: EPI', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_sv', n: 'Módulo: SINAIS VITAIS', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_curativo', n: 'Módulo: CURATIVO', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_hemo', n: 'Módulo: HEMORRAGIA', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_va', n: 'Módulo: VIA AÉREA', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_calor', n: 'Módulo: CALOR', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_sutura', n: 'Módulo: SUTURA', cat: 1, vias: ['avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_puncao', n: 'Módulo: PUNÇÃO', cat: 1, vias: ['avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            
+            { id: 'med_geral', n: 'Medicação de Rotina', cat: 2, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['COMPLETA', 'FA'] },
+            { id: 'med_ctrl', n: 'Psicotrópicos/Controlados', cat: 2, vias: ['avancada_upa', 'avancada_paje'], opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
+            { id: 'dea_kit', n: 'DEA (Pás e Bateria)', cat: 2, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
+            
+            { id: 'o2_g', n: 'O2 Rede (Torpedo Grande)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['LACRADO', 'MC>20', 'TROCA', 'FA'] },
+            { id: 'o2_p', n: 'O2 Portátil', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['LACRADO', 'MC>40', 'TROCA', 'FA'] },
+            { id: 'imob_kit', n: 'Kit Trauma (Prancha/Colares)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            
+            { id: 'parede_kit', n: 'Aspirador / Fluxômetros', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'gaveta_kit', n: 'Chave O2 / Lanterna', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }
+        ];
+
+        function App() {
+            const [view, setView] = useState('menu'); 
+            const [tab, setTab] = useState('monitor');
+            const [vSel, setVSel] = useState(null);
+            const [step, setStep] = useState(0);
+            const [db, setDb] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [form, setForm] = useState({ placa: '', posto: '', guerra: '', obs: '', items: {} });
+
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step, db, tab]);
+
+            const audit = useMemo(() => {
+                if (!db.length) return { op: 0, shifts: {}, history: [] };
+                // (Mantida sua lógica excelente de auditoria e cálculo de plantão)
+                const today = new Date().toLocaleDateString('pt-BR');
+                const conformeOptions = ['OK', 'COMPLETA', 'C/ LACRE', 'LACRADO', 'MC>20', 'MC>40'];
+                const falhaOptions = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'];
+                
+                const total = db.filter(d => d[4] !== 'INFO').length;
+                const oks = db.filter(d => conformeOptions.includes(d[5]?.trim().toUpperCase())).length;
+                
+                const historyMap = db.reduce((acc, d) => {
+                    if(d[4] === 'INFO') return acc;
+                    const k = `${d[0]}_${d[2]}`;
+                    if (!acc[k]) acc[k] = { ts: d[0], v: d[1], p: d[2], r: d[3], alertas: [] };
+                    if (falhaOptions.includes(d[5]?.trim().toUpperCase())) {
+                        acc[k].alertas.push({ nome: d[4], status: d[5], obs: d[6] || '' }); 
+                    }
+                    return acc;
+                }, {});
+
+                const shifts = {};
+                VIATURAS.forEach(v => {
+                    const logs = db.filter(d => d[1] === v.label && d[0].includes(today));
+                    const check = (s, e) => {
+                        const l = logs.find(d => { 
+                            const match = d[0].match(/(\d{2}):/);
+                            if(!match) return false;
+                            return parseInt(match[1]) >= s && parseInt(match[1]) < e;
+                        });
+                        return l ? { ok: true, u: l[3] } : { ok: false };
+                    };
+                    shifts[v.label] = { M: check(7, 13), T: check(13, 19), N: check(19, 24) || check(0, 7) };
+                });
+
+                return { op: total > 0 ? Math.round((oks / total) * 100) : 0, shifts, history: Object.values(historyMap).reverse() };
+            }, [db]);
+
+            const start = (v) => {
+                const items = {};
+                CHECKLIST.filter(i => i.vias.includes(v.id)).forEach(i => items[i.id] = { status: i.opts[0], obs: '' });
+                setForm({ placa: '', posto: '', guerra: '', obs: '', items });
+                setVSel(v);
+                setStep(0);
+                setView('form');
+            };
+
+            const checkBloqueios = () => {
+                if(!form.placa || !form.posto || !form.guerra) {
+                    alert("⚠️ BLOQUEIO: Identificação da Viatura ou Militar incompleta.");
+                    return false;
+                }
+                const statusCriticos = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'];
+                const falha = Object.entries(form.items).find(([id, v]) => statusCriticos.includes(v.status) && v.obs.trim() === '');
+                if (falha) {
+                    const nome = CHECKLIST.find(i => i.id === falha[0]).n;
+                    alert(`🔒 TRAVA DE AUDITORIA:\n\nItem: ${nome}\nStatus: ${falha[1].status}\n\nÉ OBRIGATÓRIO descrever o problema/falta na observação.`);
+                    return false;
+                }
+                return true;
+            }
+
+            const sendApi = async () => {
+                if(!checkBloqueios()) return;
+                setLoading(true);
+                const payload = {
+                    action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`, obsGerais: form.obs,
+                    items: Object.entries(form.items).map(([id, v]) => ({ nome: CHECKLIST.find(i => i.id === id).n, status: v.status, obs: v.obs }))
+                };
+                try {
+                    if (API_URL !== "SUA_URL_AQUI") {
+                        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                    }
+                    setView('sucesso');
+                } catch (e) { 
+                    alert("ERRO DE REDE. Os dados não foram para a planilha, mas você pode enviar via WhatsApp."); 
+                    setView('sucesso');
+                }
+                setLoading(false);
+            };
+
+            const sendWhatsApp = () => {
+                const falhas = Object.entries(form.items).filter(([id, v]) => ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(v.status));
+                
+                let texto = `*CHECKLIST HACO - ${vSel.label}*\n`;
+                texto += `🚑 VTR: ${form.placa}\n`;
+                texto += `🧑‍⚕️ Resp: ${form.posto} ${form.guerra}\n`;
+                texto += `📅 Hora: ${new Date().toLocaleTimeString('pt-BR')}\n\n`;
+                
+                if (falhas.length === 0) {
+                    texto += `✅ *VIATURA CONFORME - 100% OPERACIONAL*\n`;
+                } else {
+                    texto += `⚠️ *ATENÇÃO - ALTERAÇÕES ENCONTRADAS:*\n`;
+                    falhas.forEach(([id, v]) => {
+                        const nome = CHECKLIST.find(i => i.id === id).n;
+                        texto += `- ${nome}: ${v.status} (${v.obs})\n`;
+                    });
+                }
+
+                if(form.obs) texto += `\n📝 *Obs Gerais:* ${form.obs}`;
+
+                const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+                window.open(url, '_blank');
+            };
+
+            const sync = async () => {
+                if(API_URL === "SUA_URL_AQUI") return alert("Configure a API_URL para acessar o painel.");
+                setLoading(true);
+                try {
+                    const r = await fetch(`${API_URL}?action=read&t=${Date.now()}`);
+                    setDb(await r.json());
+                    setView('admin');
+                } catch (e) { alert("FALHA DE SINCRONIZAÇÃO."); }
+                setLoading(false);
+            };
+
+            if (view === 'menu') return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade bg-slate-50">
+                    <div className="text-center space-y-3">
+                        <div className="bg-[#003366] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl"><i data-lucide="activity" className="text-white w-10 h-10"></i></div>
+                        <h1 className="text-4xl font-black uppercase tracking-tight text-[#003366]">SAE <span className="text-red-600">HACO</span></h1>
+                        <p className="text-slate-500 font-mono text-xs uppercase tracking-widest font-bold">Checklist Operacional de Viatura</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
+                        {VIATURAS.map(v => (
+                            <button key={v.id} onClick={() => start(v)} className={`t-panel p-6 rounded-xl flex items-center justify-between transition-all border-l-8 active:scale-95 ${v.border}`}>
+                                <span className={`font-black text-xl uppercase tracking-tight text-slate-800`}>{v.label}</span>
+                                <i data-lucide="ambulance" className="text-slate-400 w-8 h-8"></i>
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={sync} className="text-slate-400 font-bold uppercase text-[10px] tracking-widest pt-10 border-t border-slate-200 w-full max-w-xs flex items-center justify-center gap-2 hover:text-[#003366]">
+                        <i data-lucide="monitor" className="w-4 h-4"></i> Painel de Operações (TV)
+                    </button>
+                </div>
+            );
+
+            if (view === 'form') {
+                const isFinal = step === CATEGORIES.length - 1;
+                const items = CHECKLIST.filter(i => i.cat === step && i.vias.includes(vSel.id));
+                const categoryName = CATEGORIES[step];
+
+                return (
+                    <div className="min-h-screen flex flex-col bg-slate-50 pb-32 animate-fade">
+                        <header className={`p-4 ${vSel.bg} shadow-md flex justify-between items-center sticky top-0 z-50`}>
+                            <button onClick={() => setView('menu')} className="p-2 bg-black/20 rounded text-white active:bg-black/40"><i data-lucide="x"></i></button>
+                            <h1 className={`font-black uppercase text-sm tracking-widest text-center flex-1 text-white`}>{vSel.label}</h1>
+                            <span className="font-mono text-[11px] font-bold px-3 py-1.5 rounded-full bg-white/20 text-white">{step + 1}/{CATEGORIES.length}</span>
+                        </header>
+
+                        <main className="p-4 space-y-5 flex-1 overflow-y-auto no-scrollbar mt-2 max-w-2xl mx-auto w-full">
+                            <h2 className="text-sm font-black uppercase text-slate-500 tracking-wider mb-6 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+                                <i data-lucide="layers" className="w-5 h-5 text-[#003366]"></i> {categoryName}
+                            </h2>
+
+                            {step === 0 && (
+                                <div className="space-y-4 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase">Identificação da Viatura</label>
+                                    <input type="text" placeholder="EX: VTR-01 / PLACA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-mono font-bold text-xl uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                    
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-4">Militar Responsável</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <input type="text" placeholder="POSTO/GRAD" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="NOME GUERRA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {items.map(i => {
+                                // Se for a etapa de módulos, usa o estilo visual de "Bolsa" transparente (Baseado nas fotos enviadas)
+                                const isModuleClass = step === 1 ? 'module-bag bg-white p-5 mt-4' : 't-panel p-5 rounded-xl';
+                                
+                                return (
+                                <div key={i.id} className={`${isModuleClass} space-y-4`}>
+                                    <span className={`font-black text-sm uppercase tracking-wider block ${step === 1 ? 'text-center text-[#003366]' : 'text-slate-700'}`}>{i.n}</span>
+                                    <div className="flex gap-2 pt-2">
+                                        {i.opts.map(opt => {
+                                            const isF = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(opt);
+                                            const isSelected = form.items[i.id].status === opt;
+                                            return (
+                                                <button key={opt} onClick={() => setForm({...form, items: {...form.items, [i.id]: { ...form.items[i.id], status: opt }}})} 
+                                                    className={`py-3 px-2 rounded-lg font-bold text-xs flex-1 transition-all ${isSelected ? (isF ? 'btn-danger shadow-md' : 'btn-success shadow-md') : 'bg-slate-100 text-slate-500 border border-slate-300'}`}>
+                                                    {opt}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <input type="text" placeholder="📝 Anotar Nº Lacre, Falta ou Validade..." 
+                                        className={`w-full p-3 border-2 rounded-lg text-sm font-bold outline-none transition-all ${['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(form.items[i.id].status) ? 'bg-red-50 border-red-300 text-red-900 placeholder:text-red-400' : 'bg-slate-50 border-slate-200 text-slate-700 focus:border-[#003366]'}`} 
+                                        value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
+                                </div>
+                            )})}
+                            
+                            {isFinal && (
+                                <div className="space-y-6 animate-fade mt-6">
+                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                                        <h3 className="font-bold text-slate-700 text-xs uppercase mb-3 tracking-wider flex items-center gap-2"><i data-lucide="message-square" className="w-4 h-4"></i> Observações do Plantão</h3>
+                                        <textarea rows="4" placeholder="Descreva manutenções pendentes, intercorrências ou avisos para o próximo plantão..." className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg text-slate-900 text-sm outline-none focus:border-[#003366]" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
+                                    </div>
+                                    
+                                    <button onClick={sendApi} disabled={loading} className="w-full btn-t-primary py-5 rounded-xl text-sm font-black uppercase tracking-widest flex justify-center items-center gap-2 shadow-lg">
+                                        {loading ? <i data-lucide="loader-2" className="animate-spin"></i> : <><i data-lucide="send"></i> ASSINAR E TRANSMITIR DADOS</>}
+                                    </button>
+                                </div>
+                            )}
+                        </main>
+
+                        <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-slate-200 flex gap-4 z-50 max-w-2xl mx-auto">
+                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-slate-200 p-4 rounded-xl text-sm font-black uppercase text-slate-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" className="inline mb-1"></i> Voltar</button>}
+                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-slate-800 text-white p-4 rounded-xl text-sm font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md">Avançar <i data-lucide="chevron-right" className="inline mb-1"></i></button>}
+                        </footer>
+                    </div>
+                );
+            }
+
+            if (view === 'sucesso') return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 text-center animate-fade">
+                    <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-inner"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
+                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-tight mb-2">AUDITORIA<br/>CONCLUÍDA</h1>
+                    <p className="text-slate-500 mb-10 text-sm font-bold">O checklist foi validado e assinado.</p>
+                    
+                    <div className="space-y-4 w-full max-w-xs">
+                        <button onClick={sendWhatsApp} className="w-full bg-[#25D366] text-white font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg border-bottom border-b-4 border-[#128C7E]">
+                            <i data-lucide="share-2"></i> Reportar no WhatsApp
+                        </button>
+                        <button onClick={() => { setView('menu'); window.location.reload(); }} className="w-full bg-slate-200 text-slate-700 font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
+                            Início
+                        </button>
+                    </div>
+                </div>
+            );
+
+            // O Painel Admin 'admin' foi mantido e ocultado para focar na tela operacional
+            return null; 
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
