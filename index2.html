@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - SISTEMA SAE (V20.2 TÁTICO)</title>
+    <title>HACO - SISTEMA SAE (V20.3 TÁTICO)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -53,7 +53,7 @@
         // PERFIS DE VIATURAS (Cores de Alto Contraste para sol forte)
         const VIATURAS = [
             { id: 'basica_upi', label: 'BÁSICA (UPI)', bg: 'bg-[#003366]', border: 'border-blue-300', tColor: 'text-white' },
-            { id: 'avancada_upa', label: 'AVANÇADA (UPA)', bg: 'bg-[#DC2626]', border: 'border-red-300', tColor: 'text-white' },
+            { id: 'avancada_upa', label: 'AVANÇADA (SAMU)', bg: 'bg-[#DC2626]', border: 'border-red-300', tColor: 'text-white' },
             { id: 'avancada_paje', label: 'PAJÉ (TÁTICA)', bg: 'bg-[#059669]', border: 'border-emerald-300', tColor: 'text-white' }
         ];
 
@@ -64,14 +64,15 @@
             { id: 'carimbo', n: 'Carimbo da Viatura', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'bvm_kits', n: 'AMBU/BVM (Ad/Ped/Neo)', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             
-            { id: 'mod_epi', n: 'Módulo: EPI', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'mod_sv', n: 'Módulo: SINAIS VITAIS', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'mod_curativo', n: 'Módulo: CURATIVO', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'mod_hemo', n: 'Módulo: HEMORRAGIA', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'mod_va', n: 'Módulo: VIA AÉREA', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'mod_calor', n: 'Módulo: CALOR', cat: 1, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'mod_sutura', n: 'Módulo: SUTURA', cat: 1, vias: ['avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'mod_puncao', n: 'Módulo: PUNÇÃO', cat: 1, vias: ['avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_epi', n: 'Módulo: EPI', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_sv', n: 'Módulo: SINAIS VITAIS', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_curativo', n: 'Módulo: CURATIVO', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_hemo', n: 'Módulo: HEMORRAGIA', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_va', n: 'Módulo: VIA AÉREA', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_calor', n: 'Módulo: CALOR', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_sutura', n: 'Módulo: SUTURA', cat: 1, vias: ['avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_puncao', n: 'Módulo: PUNÇÃO', cat: 1, vias: ['avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'kit_samu', n: 'Kits Padrão SAMU', cat: 1, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
             
             { id: 'med_geral', n: 'Medicação de Rotina', cat: 2, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['COMPLETA', 'FA'] },
             { id: 'med_ctrl', n: 'Psicotrópicos/Controlados', cat: 2, vias: ['avancada_upa', 'avancada_paje'], opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
@@ -98,7 +99,7 @@
 
             const audit = useMemo(() => {
                 if (!db.length) return { op: 0, shifts: {}, history: [] };
-                // (Mantida sua lógica excelente de auditoria e cálculo de plantão)
+                
                 const today = new Date().toLocaleDateString('pt-BR');
                 const conformeOptions = ['OK', 'COMPLETA', 'C/ LACRE', 'LACRADO', 'MC>20', 'MC>40'];
                 const falhaOptions = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'];
@@ -264,12 +265,12 @@
                             )}
 
                             {items.map(i => {
-                                // Se for a etapa de módulos, usa o estilo visual de "Bolsa" transparente (Baseado nas fotos enviadas)
-                                const isModuleClass = step === 1 ? 'module-bag bg-white p-5 mt-4' : 't-panel p-5 rounded-xl';
+                                // Se for a etapa de módulos e não for Avançada (SAMU), usa o estilo visual de "Bolsa" transparente
+                                const isModuleClass = step === 1 && vSel.id !== 'avancada_upa' ? 'module-bag bg-white p-5 mt-4' : 't-panel p-5 rounded-xl';
                                 
                                 return (
                                 <div key={i.id} className={`${isModuleClass} space-y-4`}>
-                                    <span className={`font-black text-sm uppercase tracking-wider block ${step === 1 ? 'text-center text-[#003366]' : 'text-slate-700'}`}>{i.n}</span>
+                                    <span className={`font-black text-sm uppercase tracking-wider block ${step === 1 && vSel.id !== 'avancada_upa' ? 'text-center text-[#003366]' : 'text-slate-700'}`}>{i.n}</span>
                                     <div className="flex gap-2 pt-2">
                                         {i.opts.map(opt => {
                                             const isF = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(opt);
