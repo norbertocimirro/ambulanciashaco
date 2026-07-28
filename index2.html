@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - SISTEMA SAE (V20.4 TÁTICO)</title>
+    <title>HACO - AMBULÂNCIAS (V20.5)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -77,12 +77,12 @@
             { id: 'med_ctrl', n: 'Psicotrópicos/Controlados', cat: 2, vias: ['avancada_upa'], opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
             { id: 'dea_kit', n: 'DEA (Pás e Bateria)', cat: 2, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
             
-            { id: 'o2_g', n: 'O2 Rede (Torpedo Grande)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['LACRADO', 'MC>20', 'TROCA', 'FA'] },
-            { id: 'o2_p', n: 'O2 Portátil', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['LACRADO', 'MC>40', 'TROCA', 'FA'] },
+            { id: 'o2_g', n: 'O2 Rede (Torpedo Grande)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['MC>20', 'TROCA', 'FA'] },
+            { id: 'o2_p', n: 'O2 Portátil', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['MC>40', 'TROCA', 'FA'] },
             { id: 'imob_kit', n: 'Kit Trauma (Prancha/Colares)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             
             { id: 'parede_kit', n: 'Aspirador / Fluxômetros', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'gaveta_kit', n: 'Chave O2 / Lanterna', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }
+            { id: 'gaveta_kit', n: 'Lanterna', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }
         ];
 
         function App() {
@@ -92,7 +92,7 @@
             const [step, setStep] = useState(0);
             const [db, setDb] = useState([]);
             const [loading, setLoading] = useState(false);
-            const [form, setForm] = useState({ placa: '', posto: '', guerra: '', lacre: '', obs: '', items: {} });
+            const [form, setForm] = useState({ placa: '', posto: '', guerra: '', motorista: '', lacre: '', obs: '', items: {} });
 
             useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step, db, tab]);
 
@@ -136,27 +136,22 @@
             const start = (v) => {
                 const items = {};
                 CHECKLIST.filter(i => i.vias.includes(v.id)).forEach(i => items[i.id] = { status: i.opts[0], obs: '' });
-                setForm({ placa: '', posto: '', guerra: '', lacre: '', obs: '', items });
+                setForm({ placa: '', posto: '', guerra: '', motorista: '', lacre: '', obs: '', items });
                 setVSel(v);
                 setStep(0);
                 setView('form');
             };
 
             const checkBloqueios = () => {
-                if(!form.placa || !form.posto || !form.guerra) {
-                    alert("⚠️ BLOQUEIO: Identificação da Viatura ou Militar incompleta.");
+                if(!form.placa || !form.posto || !form.guerra || !form.motorista) {
+                    alert("⚠️ BLOQUEIO: Identificação da Viatura, Responsável ou Motorista incompleta.");
                     return false;
                 }
                 const statusCriticos = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'];
                 const falha = Object.entries(form.items).find(([id, v]) => statusCriticos.includes(v.status) && v.obs.trim() === '');
                 if (falha) {
                     const nome = CHECKLIST.find(i => i.id === falha[0]).n;
-                    alert(`🔒 TRAVA DE AUDITORIA:
-
-Item: ${nome}
-Status: ${falha[1].status}
-
-É OBRIGATÓRIO descrever o problema/falta na observação.`);
+                    alert(`🔒 TRAVA DE AUDITORIA:\n\nItem: ${nome}\nStatus: ${falha[1].status}\n\nÉ OBRIGATÓRIO descrever o problema/falta na observação.`);
                     return false;
                 }
                 return true;
@@ -169,7 +164,7 @@ Status: ${falha[1].status}
                 const obsComLacre = form.lacre ? `LACRE MOCHILA: ${form.lacre} | ${form.obs}` : form.obs;
                 
                 const payload = {
-                    action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`, obsGerais: obsComLacre,
+                    action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`, motorista: form.motorista, obsGerais: obsComLacre,
                     items: Object.entries(form.items).map(([id, v]) => ({ nome: CHECKLIST.find(i => i.id === id).n, status: v.status, obs: v.obs }))
                 };
                 try {
@@ -187,33 +182,24 @@ Status: ${falha[1].status}
             const sendWhatsApp = () => {
                 const falhas = Object.entries(form.items).filter(([id, v]) => ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(v.status));
                 
-                let texto = `*CHECKLIST HACO - ${vSel.label}*
-`;
-                texto += `🚑 VTR: ${form.placa}
-`;
-                texto += `🧑‍⚕️ Resp: ${form.posto} ${form.guerra}
-`;
-                if(form.lacre) texto += `🔒 Lacre Mochila: ${form.lacre}
-`;
-                texto += `📅 Hora: ${new Date().toLocaleTimeString('pt-BR')}
-
-`;
+                let texto = `*CHECKLIST HACO - ${vSel.label}*\n`;
+                texto += `🚑 VTR: ${form.placa}\n`;
+                texto += `🧑‍⚕️ Resp: ${form.posto} ${form.guerra}\n`;
+                texto += `👨‍✈️ Mot: ${form.motorista}\n`;
+                if(form.lacre) texto += `🔒 Lacre Mochila: ${form.lacre}\n`;
+                texto += `📅 Hora: ${new Date().toLocaleTimeString('pt-BR')}\n\n`;
                 
                 if (falhas.length === 0) {
-                    texto += `✅ *VIATURA CONFORME - 100% OPERACIONAL*
-`;
+                    texto += `✅ *VIATURA CONFORME - 100% OPERACIONAL*\n`;
                 } else {
-                    texto += `⚠️ *ATENÇÃO - ALTERAÇÕES ENCONTRADAS:*
-`;
+                    texto += `⚠️ *ATENÇÃO - ALTERAÇÕES ENCONTRADAS:*\n`;
                     falhas.forEach(([id, v]) => {
                         const nome = CHECKLIST.find(i => i.id === id).n;
-                        texto += `- ${nome}: ${v.status} (${v.obs})
-`;
+                        texto += `- ${nome}: ${v.status} (${v.obs})\n`;
                     });
                 }
 
-                if(form.obs) texto += `
-📝 *Obs Gerais:* ${form.obs}`;
+                if(form.obs) texto += `\n📝 *Obs Gerais:* ${form.obs}`;
 
                 const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
                 window.open(url, '_blank');
@@ -234,7 +220,7 @@ Status: ${falha[1].status}
                 <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade bg-slate-50">
                     <div className="text-center space-y-3">
                         <div className="bg-[#003366] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl"><i data-lucide="activity" className="text-white w-10 h-10"></i></div>
-                        <h1 className="text-4xl font-black uppercase tracking-tight text-[#003366]">SAE <span className="text-red-600">HACO</span></h1>
+                        <h1 className="text-4xl font-black uppercase tracking-tight text-[#003366]">AMBULÂNCIAS <span className="text-red-600">HACO</span></h1>
                         <p className="text-slate-500 font-mono text-xs uppercase tracking-widest font-bold">Checklist Operacional de Viatura</p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
@@ -276,16 +262,17 @@ Status: ${falha[1].status}
                                     
                                     {vSel.id !== 'avancada_upa' && (
                                         <>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase mt-4 text-red-600"><i data-lucide="lock" className="w-3 h-3 inline"></i> Lacre da Mochila Operacional</label>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mt-4 text-red-600"><i data-lucide="lock" className="w-3 h-3 inline"></i> Lacre da Mochila</label>
                                             <input type="text" placeholder="Nº DO LACRE" className="w-full p-4 bg-red-50 border-2 border-red-200 rounded-lg font-mono font-bold text-xl uppercase text-red-900 placeholder:text-red-300 focus:border-red-500 outline-none" value={form.lacre} onChange={e => setForm({...form, lacre: e.target.value.toUpperCase()})} />
                                         </>
                                     )}
 
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-4">Militar Responsável</label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <input type="text" placeholder="POSTO/GRAD" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
-                                        <input type="text" placeholder="NOME GUERRA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-4">Equipe</label>
+                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                        <input type="text" placeholder="POSTO/GRAD (RESP)" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="GUERRA (RESP)" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
                                     </div>
+                                    <input type="text" placeholder="NOME DE GUERRA DO MOTORISTA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.motorista} onChange={e => setForm({...form, motorista: e.target.value.toUpperCase()})} />
                                 </div>
                             )}
 
@@ -321,7 +308,7 @@ Status: ${falha[1].status}
                                     </div>
                                     
                                     <button onClick={sendApi} disabled={loading} className="w-full btn-t-primary py-5 rounded-xl text-sm font-black uppercase tracking-widest flex justify-center items-center gap-2 shadow-lg">
-                                        {loading ? <i data-lucide="loader-2" className="animate-spin"></i> : <><i data-lucide="send"></i> ASSINAR E TRANSMITIR DADOS</>}
+                                        {loading ? <i data-lucide="loader-2" className="animate-spin"></i> : <><i data-lucide="send"></i> TRANSMITIR DADOS</>}
                                     </button>
                                 </div>
                             )}
@@ -339,7 +326,7 @@ Status: ${falha[1].status}
                 <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 text-center animate-fade">
                     <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-inner"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
                     <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-tight mb-2">AUDITORIA<br/>CONCLUÍDA</h1>
-                    <p className="text-slate-500 mb-10 text-sm font-bold">O checklist foi validado e assinado.</p>
+                    <p className="text-slate-500 mb-10 text-sm font-bold">O checklist foi validado e transmitido.</p>
                     
                     <div className="space-y-4 w-full max-w-xs">
                         <button onClick={sendWhatsApp} className="w-full bg-[#25D366] text-white font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg border-bottom border-b-4 border-[#128C7E]">
