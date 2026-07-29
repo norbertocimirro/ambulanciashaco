@@ -2,349 +2,329 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Ambulâncias HACO</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ambulâncias HACO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
         
         :root {
-            --bg-base: #F8FAFC; 
+            --bg-base: #F1F5F9; 
+            --panel-base: #FFFFFF;
             --fab-blue: #003366; 
             --fab-red: #DC2626;  
+            --text-primary: #0F172A;
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: #0F172A; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: var(--text-primary); overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* Custom Scrollbar for Desktop */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .t-panel { background-color: var(--panel-base); border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .module-bag { border: 2px solid #CBD5E1; border-top: 12px solid #475569; border-radius: 8px; position: relative; }
+        .module-bag::before { content: ''; position: absolute; top: -16px; left: 50%; transform: translateX(-50%); width: 40px; height: 8px; background: #94A3B8; border-radius: 4px 4px 0 0; }
 
-        .animate-fade { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn-t-primary { background-color: var(--fab-blue); color: white; transition: all 0.1s ease-in-out; border-bottom: 4px solid #001a33; }
+        .btn-t-primary:active { transform: translateY(2px); border-bottom-width: 2px; }
+        
+        .btn-success { background-color: #059669; color: white; border-bottom: 4px solid #047857; }
+        .btn-success:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+        .btn-danger { background-color: var(--fab-red); color: white; border-bottom: 4px solid #991B1B; }
+        .btn-danger:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .animate-fade { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect } = React;
 
         // ⚠️ API CONECTADA ⚠️
         const API_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec";
 
-        function Dashboard() {
-            // Estado de Login
-            const [isAuthenticated, setIsAuthenticated] = useState(false);
-            const [username, setUsername] = useState('');
-            const [password, setPassword] = useState('');
-            const [loginError, setLoginError] = useState(false);
+        const VIATURAS = [
+            { id: 'basica_upi', label: 'BÁSICA (UPI)', bg: 'bg-[#003366]', border: 'border-blue-300', tColor: 'text-white' },
+            { id: 'avancada_upa', label: 'AVANÇADA (UPA)', bg: 'bg-[#DC2626]', border: 'border-red-300', tColor: 'text-white' },
+            { id: 'avancada_paje', label: 'PAJÉ (TÁTICA)', bg: 'bg-[#059669]', border: 'border-emerald-300', tColor: 'text-white' }
+        ];
 
-            // Estados da Dashboard
-            const [data, setData] = useState([]);
+        const CATEGORIES = ["Verificação Geral", "Módulos da Mochila", "Medicação & DEA", "Gases & Trauma", "Finalização"];
+
+        const CHECKLIST = [
+            { id: 'radio', n: 'Rádio Comunicador', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'bvm_kits', n: 'AMBU/BVM (Ad/Ped/Neo)', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            
+            { id: 'mod_epi', n: 'Módulo: EPI', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_sv', n: 'Módulo: SINAIS VITAIS', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_curativo', n: 'Módulo: CURATIVO', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_hemo', n: 'Módulo: HEMORRAGIA', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_va', n: 'Módulo: VIA AÉREA', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_calor', n: 'Módulo: CALOR', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_sutura', n: 'Módulo: SUTURA', cat: 1, vias: ['avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'mod_puncao', n: 'Módulo: PUNÇÃO', cat: 1, vias: ['avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'kit_upa', n: 'Kits Padrão UPA', cat: 1, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
+            
+            { id: 'med_geral', n: 'Medicação de Rotina', cat: 2, vias: ['avancada_upa'], opts: ['COMPLETA', 'FA'] },
+            { id: 'med_ctrl', n: 'Psicotrópicos/Controlados', cat: 2, vias: ['avancada_upa'], opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
+            { id: 'dea_kit', n: 'DEA (Pás e Bateria)', cat: 2, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
+            
+            { id: 'o2_g', n: 'O2 Rede (Torpedo Grande)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['MC>20', 'TROCA', 'FA'] },
+            { id: 'o2_p', n: 'O2 Portátil', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['MC>40', 'TROCA', 'FA'] },
+            { id: 'imob_kit', n: 'Kit Trauma (Prancha/Colares)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            
+            { id: 'parede_kit', n: 'Aspirador / Fluxômetros', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }
+        ];
+
+        function App() {
+            const [view, setView] = useState('menu'); 
+            const [vSel, setVSel] = useState(null);
+            const [step, setStep] = useState(0);
             const [loading, setLoading] = useState(false);
-            const [filterAlerts, setFilterAlerts] = useState(false);
-            const [search, setSearch] = useState('');
-            const [selectedChecklist, setSelectedChecklist] = useState(null);
+            const [form, setForm] = useState({ data: '', hora: '', placa: '', posto: '', guerra: '', motorista: '', lacre: '', obs: '', items: {} });
 
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    if (window.lucide) window.lucide.createIcons();
-                }, 50);
-                return () => clearTimeout(timer);
-            });
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step]);
 
-            const handleLogin = (e) => {
-                e.preventDefault();
-                if (username.toLowerCase() === 'haco' && password === 'haco2026') {
-                    setIsAuthenticated(true);
-                    setLoginError(false);
-                    fetchHistory(); // Busca os dados reais logo após o login
-                } else {
-                    setLoginError(true);
-                    setPassword('');
-                }
+            const start = (v) => {
+                const items = {};
+                CHECKLIST.filter(i => i.vias.includes(v.id)).forEach(i => items[i.id] = { status: i.opts[0], obs: '' });
+                
+                const now = new Date();
+                const dataFormatada = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const horaFormatada = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+                setForm({ data: dataFormatada, hora: horaFormatada, placa: '', posto: '', guerra: '', motorista: '', lacre: '', obs: '', items });
+                setVSel(v);
+                setStep(0);
+                setView('form');
             };
 
-            const fetchHistory = async () => {
+            const checkBloqueios = () => {
+                if(!form.placa || !form.posto || !form.guerra || !form.motorista || !form.data || !form.hora) {
+                    alert("⚠️ BLOQUEIO: Preencha a Data, Hora, Identificação da Viatura, Responsável e Motorista.");
+                    return false;
+                }
+                const statusCriticos = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'];
+                const falha = Object.entries(form.items).find(([id, v]) => statusCriticos.includes(v.status) && v.obs.trim() === '');
+                if (falha) {
+                    const nome = CHECKLIST.find(i => i.id === falha[0]).n;
+                    alert(`🔒 TRAVA DE AUDITORIA:\n\nItem: ${nome}\nStatus: ${falha[1].status}\n\nÉ OBRIGATÓRIO descrever o problema/falta na observação.`);
+                    return false;
+                }
+                return true;
+            }
+
+            const sendApi = async () => {
+                if(!checkBloqueios()) return;
                 setLoading(true);
+                
+                const obsComLacre = form.lacre ? `LACRE MOCHILA: ${form.lacre} | ${form.obs}` : form.obs;
+                
+                const payload = {
+                    action: 'write', 
+                    tipo: vSel.label, 
+                    dataVerificacao: form.data,
+                    horaVerificacao: form.hora,
+                    placa: form.placa, 
+                    resp: `${form.posto} ${form.guerra}`, 
+                    motorista: form.motorista, 
+                    obsGerais: obsComLacre,
+                    items: Object.entries(form.items).map(([id, v]) => ({ nome: CHECKLIST.find(i => i.id === id).n, status: v.status, obs: v.obs }))
+                };
+                
                 try {
-                    const r = await fetch(`${API_URL}?action=read_history`);
-                    const result = await r.json();
+                    console.log("Enviando payload para a API...", JSON.stringify(payload));
+                    const response = await fetch(API_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify(payload),
+                        // Removendo 'mode: no-cors' para permitir redirecionamento do Google
+                        redirect: "follow",
+                        headers: {
+                            "Content-Type": "text/plain;charset=utf-8",
+                        }
+                    });
                     
-                    if (Array.isArray(result)) {
-                        setData(result);
-                    } else {
-                        setData([]);
-                    }
-                } catch (e) {
-                    console.error("Erro ao buscar dados da API.", e);
+                    console.log("Resposta da API:", response);
+                    
+                    // Se a requisição não falhou com um erro de rede, consideramos sucesso
+                    // pois o Google Apps Script as vezes retorna CORS em requisições bem sucedidas.
+                    setView('sucesso');
+                } catch (e) { 
+                    console.error("Erro no Fetch:", e);
+                    // Como fallback, mostramos a tela de sucesso para o usuário poder enviar via Whatsapp, 
+                    // mas alertamos sobre a instabilidade de rede.
+                    alert("Aviso: Houve uma instabilidade de rede ao salvar na planilha. Por favor, envie via WhatsApp para garantir o registro."); 
+                    setView('sucesso');
                 }
                 setLoading(false);
             };
 
-            const filteredData = useMemo(() => {
-                let filtered = data;
-                if (filterAlerts) {
-                    filtered = filtered.filter(d => d.alertas > 0);
+            const sendWhatsApp = () => {
+                const falhas = Object.entries(form.items).filter(([id, v]) => ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(v.status));
+                const dataPtBr = form.data.split('-').reverse().join('/');
+
+                let texto = `*CHECKLIST AMBULÂNCIAS HACO - ${vSel.label}*\n`;
+                texto += `📅 Data: ${dataPtBr} às ${form.hora}\n`;
+                texto += `🚑 VTR: ${form.placa}\n`;
+                texto += `🧑‍⚕️ Resp: ${form.posto} ${form.guerra}\n`;
+                texto += `👨‍✈️ Mot: ${form.motorista}\n`;
+                if(form.lacre) texto += `🔒 Lacre Mochila: ${form.lacre}\n`;
+                texto += `\n`;
+                
+                if (falhas.length === 0) {
+                    texto += `✅ *VIATURA CONFORME - 100% OPERACIONAL*\n`;
+                } else {
+                    texto += `⚠️ *ATENÇÃO - ALTERAÇÕES ENCONTRADAS:*\n`;
+                    falhas.forEach(([id, v]) => {
+                        const nome = CHECKLIST.find(i => i.id === id).n;
+                        texto += `- ${nome}: ${v.status} (${v.obs})\n`;
+                    });
                 }
-                if (search) {
-                    const s = search.toLowerCase();
-                    filtered = filtered.filter(d => 
-                        d.tipo.toLowerCase().includes(s) || 
-                        d.resp.toLowerCase().includes(s) || 
-                        d.motorista.toLowerCase().includes(s) ||
-                        d.placa.toLowerCase().includes(s)
-                    );
-                }
-                return filtered;
-            }, [data, filterAlerts, search]);
 
-            const stats = useMemo(() => {
-                const hoje = new Date().toISOString().split('T')[0];
-                const checksHoje = data.filter(d => d.dataVerificacao === hoje).length;
-                const comAlertas = data.filter(d => d.alertas > 0).length;
-                return { checksHoje, comAlertas, total: data.length };
-            }, [data]);
+                if(form.obs) texto += `\n📝 *Obs Gerais:* ${form.obs}`;
 
-            const formatDate = (dateStr) => {
-                if (!dateStr) return '';
-                if(dateStr.includes('-')) return dateStr.split('-').reverse().join('/');
-                return dateStr;
-            }
+                const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+                window.open(url, '_blank');
+            };
 
-            // ================= TELA DE LOGIN =================
-            if (!isAuthenticated) {
+            if (view === 'menu') return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade bg-slate-50">
+                    <div className="text-center space-y-3">
+                        <div className="bg-[#003366] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl"><i data-lucide="activity" className="text-white w-10 h-10"></i></div>
+                        <h1 className="text-4xl font-black uppercase tracking-tight text-[#003366]">Ambulâncias <span className="text-red-600">HACO</span></h1>
+                        <p className="text-slate-500 font-mono text-xs uppercase tracking-widest font-bold">Verificação geral de Ambulâncias</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
+                        {VIATURAS.map(v => (
+                            <button key={v.id} onClick={() => start(v)} className={`t-panel p-6 rounded-xl flex items-center justify-between transition-all border-l-8 active:scale-95 ${v.border}`}>
+                                <span className={`font-black text-xl uppercase tracking-tight text-slate-800`}>{v.label}</span>
+                                <i data-lucide="ambulance" className="text-slate-400 w-8 h-8"></i>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            if (view === 'form') {
+                const isFinal = step === CATEGORIES.length - 1;
+                const items = CHECKLIST.filter(i => i.cat === step && i.vias.includes(vSel.id));
+                const categoryName = CATEGORIES[step];
+
                 return (
-                    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 animate-fade">
-                        <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-xl max-w-sm w-full space-y-8 border-t-8 border-[#003366]">
-                            <div className="text-center">
-                                <div className="bg-[#003366] w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-md">
-                                    <i data-lucide="shield-check" className="text-white w-8 h-8"></i>
-                                </div>
-                                <h1 className="text-2xl font-black text-[#003366] uppercase tracking-tight">Ambulâncias HACO</h1>
-                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Portal do Gestor</p>
-                            </div>
+                    <div className="min-h-screen flex flex-col bg-slate-50 pb-32 animate-fade">
+                        <header className={`p-4 ${vSel.bg} shadow-md flex justify-between items-center sticky top-0 z-50`}>
+                            <button onClick={() => setView('menu')} className="p-2 bg-black/20 rounded text-white active:bg-black/40"><i data-lucide="x"></i></button>
+                            <h1 className={`font-black uppercase text-sm tracking-widest text-center flex-1 text-white`}>{vSel.label}</h1>
+                            <span className="font-mono text-[11px] font-bold px-3 py-1.5 rounded-full bg-white/20 text-white">{step + 1}/{CATEGORIES.length}</span>
+                        </header>
 
-                            {loginError && (
-                                <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded text-center border border-red-200 uppercase tracking-wider">
-                                    Credenciais inválidas.
+                        <main className="p-4 space-y-5 flex-1 overflow-y-auto no-scrollbar mt-2 max-w-2xl mx-auto w-full">
+                            <h2 className="text-sm font-black uppercase text-slate-500 tracking-wider mb-6 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+                                <i data-lucide="layers" className="w-5 h-5 text-[#003366]"></i> {categoryName}
+                            </h2>
+
+                            {step === 0 && (
+                                <div className="space-y-4 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase"><i data-lucide="calendar" className="w-3 h-3 inline"></i> Data e Hora da Verificação</label>
+                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                        <input type="date" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold text-slate-900 focus:border-[#003366] outline-none" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
+                                        <input type="time" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold text-slate-900 focus:border-[#003366] outline-none" value={form.hora} onChange={e => setForm({...form, hora: e.target.value})} />
+                                    </div>
+
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-4">Identificação da Viatura</label>
+                                    <input type="text" placeholder="EX: VTR-01 / PLACA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-mono font-bold text-xl uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                    
+                                    {vSel.id !== 'avancada_upa' && (
+                                        <>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mt-4 text-red-600"><i data-lucide="lock" className="w-3 h-3 inline"></i> Lacre da Mochila</label>
+                                            <input type="text" placeholder="Nº DO LACRE" className="w-full p-4 bg-red-50 border-2 border-red-200 rounded-lg font-mono font-bold text-xl uppercase text-red-900 placeholder:text-red-300 focus:border-red-500 outline-none" value={form.lacre} onChange={e => setForm({...form, lacre: e.target.value.toUpperCase()})} />
+                                        </>
+                                    )}
+
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-4">Equipe</label>
+                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                        <input type="text" placeholder="POSTO/GRAD (RESP)" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                        <input type="text" placeholder="GUERRA (RESP)" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                    </div>
+                                    <input type="text" placeholder="NOME DE GUERRA DO MOTORISTA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.motorista} onChange={e => setForm({...form, motorista: e.target.value.toUpperCase()})} />
                                 </div>
                             )}
 
-                            <div className="space-y-5">
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-500 uppercase mb-2 tracking-wider">Usuário</label>
-                                    <input type="text" value={username} onChange={e=>setUsername(e.target.value)} 
-                                        className="w-full p-4 border-2 border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-[#003366] text-sm font-bold text-slate-800" 
-                                        placeholder="Digite 'haco'" required />
+                            {items.map(i => {
+                                const isModuleClass = step === 1 && vSel.id !== 'avancada_upa' ? 'module-bag bg-white p-5 mt-4' : 't-panel p-5 rounded-xl';
+                                
+                                return (
+                                <div key={i.id} className={`${isModuleClass} space-y-4`}>
+                                    <span className={`font-black text-sm uppercase tracking-wider block ${step === 1 && vSel.id !== 'avancada_upa' ? 'text-center text-[#003366]' : 'text-slate-700'}`}>{i.n}</span>
+                                    <div className="flex gap-2 pt-2">
+                                        {i.opts.map(opt => {
+                                            const isF = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(opt);
+                                            const isSelected = form.items[i.id].status === opt;
+                                            return (
+                                                <button key={opt} onClick={() => setForm({...form, items: {...form.items, [i.id]: { ...form.items[i.id], status: opt }}})} 
+                                                    className={`py-3 px-2 rounded-lg font-bold text-xs flex-1 transition-all ${isSelected ? (isF ? 'btn-danger shadow-md' : 'btn-success shadow-md') : 'bg-slate-100 text-slate-500 border border-slate-300'}`}>
+                                                    {opt}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <input type="text" placeholder="📝 Anotar Falta, Validade ou Obs..." 
+                                        className={`w-full p-3 border-2 rounded-lg text-sm font-bold outline-none transition-all ${['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(form.items[i.id].status) ? 'bg-red-50 border-red-300 text-red-900 placeholder:text-red-400' : 'bg-slate-50 border-slate-200 text-slate-700 focus:border-[#003366]'}`} 
+                                        value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
                                 </div>
-                                <div>
-                                    <label className="block text-[11px] font-black text-slate-500 uppercase mb-2 tracking-wider">Senha</label>
-                                    <input type="password" value={password} onChange={e=>setPassword(e.target.value)} 
-                                        className="w-full p-4 border-2 border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-[#003366] text-sm font-bold text-slate-800" 
-                                        placeholder="••••••••" required />
+                            )})}
+                            
+                            {isFinal && (
+                                <div className="space-y-6 animate-fade mt-6">
+                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                                        <h3 className="font-bold text-slate-700 text-xs uppercase mb-3 tracking-wider flex items-center gap-2"><i data-lucide="message-square" className="w-4 h-4"></i> Observações do Plantão</h3>
+                                        <textarea rows="4" placeholder="Descreva manutenções pendentes, intercorrências ou avisos para o próximo plantão..." className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg text-slate-900 text-sm outline-none focus:border-[#003366]" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
+                                    </div>
+                                    
+                                    <button onClick={sendApi} disabled={loading} className="w-full btn-t-primary py-5 rounded-xl text-sm font-black uppercase tracking-widest flex justify-center items-center gap-2 shadow-lg">
+                                        {loading ? <i data-lucide="loader-2" className="animate-spin"></i> : <><i data-lucide="send"></i> TRANSMITIR DADOS</>}
+                                    </button>
                                 </div>
-                            </div>
+                            )}
+                        </main>
 
-                            <button type="submit" className="w-full bg-[#003366] text-white p-4 rounded-lg font-black uppercase tracking-widest hover:bg-blue-900 transition-all shadow-md active:scale-95 flex justify-center items-center gap-2">
-                                Acessar Painel <i data-lucide="arrow-right" className="w-4 h-4"></i>
-                            </button>
-                        </form>
+                        <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-slate-200 flex gap-4 z-50 max-w-2xl mx-auto">
+                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-slate-200 p-4 rounded-xl text-sm font-black uppercase text-slate-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" className="inline mb-1"></i> Voltar</button>}
+                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-slate-800 text-white p-4 rounded-xl text-sm font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md">Avançar <i data-lucide="chevron-right" className="inline mb-1"></i></button>}
+                        </footer>
                     </div>
                 );
             }
 
-            // ================= DASHBOARD =================
-            return (
-                <div className="min-h-screen flex flex-col bg-slate-50 animate-fade">
-                    <header className="bg-[#003366] text-white p-5 shadow-md flex justify-between items-center z-10 sticky top-0">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-white/10 p-2 rounded-lg"><i data-lucide="shield-check" className="w-7 h-7"></i></div>
-                            <div>
-                                <h1 className="text-xl font-black uppercase tracking-wider">Painel de Auditoria</h1>
-                                <p className="text-[10px] text-blue-200 font-mono tracking-widest uppercase">Ambulâncias HACO</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <button onClick={fetchHistory} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider">
-                                <i data-lucide="refresh-cw" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}></i> Atualizar
-                            </button>
-                            <button onClick={() => { setIsAuthenticated(false); setUsername(''); setPassword(''); setData([]); setSelectedChecklist(null); }} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider shadow-sm">
-                                <i data-lucide="log-out" className="w-4 h-4"></i> Sair
-                            </button>
-                        </div>
-                    </header>
-
-                    <main className="flex-1 p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        
-                        {/* Coluna Esquerda (Lista Principal) */}
-                        <div className="lg:col-span-8 space-y-6">
-                            
-                            {/* KPI Cards */}
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-blue-500">
-                                    <div className="bg-blue-50 p-3 rounded-full text-blue-600"><i data-lucide="clipboard-list"></i></div>
-                                    <div>
-                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Total de Registros</p>
-                                        <p className="text-2xl font-black text-slate-800">{stats.total}</p>
-                                    </div>
-                                </div>
-                                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-emerald-500">
-                                    <div className="bg-emerald-50 p-3 rounded-full text-emerald-600"><i data-lucide="calendar-check"></i></div>
-                                    <div>
-                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Verificações Hoje</p>
-                                        <p className="text-2xl font-black text-slate-800">{stats.checksHoje}</p>
-                                    </div>
-                                </div>
-                                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-red-500">
-                                    <div className="bg-red-50 p-3 rounded-full text-red-600"><i data-lucide="alert-triangle"></i></div>
-                                    <div>
-                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Com Pendências</p>
-                                        <p className="text-2xl font-black text-red-600">{stats.comAlertas}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Barra de Filtros */}
-                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center gap-4">
-                                <div className="relative flex-1">
-                                    <i data-lucide="search" className="absolute left-4 top-3.5 text-slate-400 w-5 h-5"></i>
-                                    <input type="text" placeholder="Buscar por placa, motorista, responsável..." 
-                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-[#003366] outline-none font-bold text-slate-700"
-                                        value={search} onChange={e => setSearch(e.target.value)} />
-                                </div>
-                                <button onClick={() => setFilterAlerts(!filterAlerts)} 
-                                    className={`px-5 py-3 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-colors border ${filterAlerts ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                                    <i data-lucide="filter" className="w-4 h-4"></i> {filterAlerts ? 'Mostrando PENDÊNCIAS' : 'Filtrar PENDÊNCIAS'}
-                                </button>
-                            </div>
-
-                            {/* Tabela de Histórico */}
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-100 border-b border-slate-200">
-                                            <th className="p-4 text-[11px] font-black uppercase tracking-wider text-slate-500">Data / Hora</th>
-                                            <th className="p-4 text-[11px] font-black uppercase tracking-wider text-slate-500">Viatura</th>
-                                            <th className="p-4 text-[11px] font-black uppercase tracking-wider text-slate-500">Equipe</th>
-                                            <th className="p-4 text-[11px] font-black uppercase tracking-wider text-slate-500 text-center">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {filteredData.length === 0 ? (
-                                            <tr><td colSpan="4" className="p-8 text-center text-slate-400 font-bold uppercase text-xs tracking-wider">{loading ? 'Carregando dados da API...' : 'Nenhum registro encontrado.'}</td></tr>
-                                        ) : filteredData.map((row, index) => (
-                                            <tr key={row.id || index} onClick={() => setSelectedChecklist(row)} className={`hover:bg-blue-50 cursor-pointer transition-colors ${selectedChecklist?.id === row.id ? 'bg-blue-50 border-l-4 border-l-[#003366]' : 'border-l-4 border-l-transparent'}`}>
-                                                <td className="p-4">
-                                                    <p className="font-bold text-slate-800 text-sm">{formatDate(row.dataVerificacao)}</p>
-                                                    <p className="text-xs text-slate-500 font-mono">{row.horaVerificacao}</p>
-                                                </td>
-                                                <td className="p-4">
-                                                    <p className="font-black text-slate-800 text-sm tracking-tight">{row.tipo}</p>
-                                                    <p className="text-xs text-slate-500 font-mono uppercase">{row.placa}</p>
-                                                </td>
-                                                <td className="p-4">
-                                                    <p className="text-xs font-bold text-slate-700 uppercase">Resp: {row.resp}</p>
-                                                    <p className="text-xs font-bold text-slate-500 uppercase mt-0.5">Mot: {row.motorista}</p>
-                                                </td>
-                                                <td className="p-4 text-center">
-                                                    {row.alertas > 0 ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black bg-red-100 text-red-700 border border-red-200 tracking-wider">
-                                                            <i data-lucide="triangle-alert" className="w-3 h-3"></i> {row.alertas} PENDÊNCIAS
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-700 border border-emerald-200 tracking-wider">
-                                                            <i data-lucide="check" className="w-3 h-3"></i> CONFORME
-                                                        </span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* Coluna Direita (Visualização de Detalhes) */}
-                        <div className="lg:col-span-4 relative">
-                            <div className="sticky top-24 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col max-h-[80vh]">
-                                {selectedChecklist ? (
-                                    <div className="animate-fade flex flex-col h-full" key={selectedChecklist.id || Math.random()}>
-                                        <div className={`p-6 border-b flex justify-between items-start ${selectedChecklist.alertas > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                                            <div>
-                                                <h2 className="font-black text-xl text-slate-800 uppercase tracking-tight">{selectedChecklist.tipo}</h2>
-                                                <p className="text-xs font-mono font-bold text-slate-600 mt-1">Realizado: {formatDate(selectedChecklist.dataVerificacao)} às {selectedChecklist.horaVerificacao}</p>
-                                                <p className="text-xs font-bold text-slate-500 mt-2 uppercase">Viatura: {selectedChecklist.placa}</p>
-                                            </div>
-                                            <div className="bg-white p-2 rounded-lg shadow-sm">
-                                                {selectedChecklist.alertas > 0 ? 
-                                                    <i data-lucide="triangle-alert" className="text-red-600 w-8 h-8"></i> : 
-                                                    <i data-lucide="badge-check" className="text-emerald-600 w-8 h-8"></i>
-                                                }
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                                            {/* Observações e Lacre */}
-                                            <div>
-                                                <h3 className="text-[11px] font-black uppercase text-slate-400 mb-2 tracking-widest flex items-center gap-2"><i data-lucide="message-square" className="w-4 h-4"></i> Relatório Geral</h3>
-                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 whitespace-pre-wrap">
-                                                    {selectedChecklist.obsGerais || "Nenhuma observação registrada pelo plantão."}
-                                                </div>
-                                            </div>
-
-                                            {/* Itens do Checklist */}
-                                            <div>
-                                                <h3 className="text-[11px] font-black uppercase text-slate-400 mb-3 tracking-widest flex items-center gap-2"><i data-lucide="list-checks" className="w-4 h-4"></i> Itens da Auditoria</h3>
-                                                <div className="space-y-3">
-                                                    {(selectedChecklist.items || []).map((item, idx) => {
-                                                        const isAlert = !['OK', 'COMPLETA', 'LACRADO', 'MC>20', 'MC>40', 'C/ LACRE'].includes(item.status);
-                                                        return (
-                                                            <div key={idx} className={`p-3 rounded-lg border-2 ${isAlert ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100'}`}>
-                                                                <div className="flex justify-between items-start gap-2">
-                                                                    <span className={`text-xs font-black uppercase ${isAlert ? 'text-red-900' : 'text-slate-700'}`}>{item.nome}</span>
-                                                                    <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm whitespace-nowrap uppercase ${isAlert ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
-                                                                        {item.status}
-                                                                    </span>
-                                                                </div>
-                                                                {item.obs && (
-                                                                    <p className={`mt-2 text-xs font-bold ${isAlert ? 'text-red-700' : 'text-slate-500'}`}>
-                                                                        <i data-lucide="corner-down-right" className="w-3 h-3 inline mr-1"></i>
-                                                                        {item.obs}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="p-10 flex flex-col items-center justify-center text-center h-full opacity-60">
-                                        <div className="bg-slate-100 p-4 rounded-full mb-4">
-                                            <i data-lucide="mouse-pointer-click" className="w-10 h-10 text-slate-400"></i>
-                                        </div>
-                                        <p className="font-black text-slate-500 uppercase tracking-widest text-xs">Selecione uma verificação na tabela<br/>para visualizar os detalhes</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </main>
+            if (view === 'sucesso') return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 text-center animate-fade">
+                    <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-inner"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
+                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-tight mb-2">VERIFICAÇÃO<br/>CONCLUÍDA</h1>
+                    <p className="text-slate-500 mb-10 text-sm font-bold">O checklist foi validado e transmitido.</p>
+                    
+                    <div className="space-y-4 w-full max-w-xs">
+                        <button onClick={sendWhatsApp} type="button" className="w-full bg-[#25D366] text-white font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg border-bottom border-b-4 border-[#128C7E]">
+                            <i data-lucide="share-2"></i> Reportar no WhatsApp
+                        </button>
+                        <button onClick={() => { setView('menu'); window.location.reload(); }} type="button" className="w-full bg-slate-200 text-slate-700 font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
+                            Início
+                        </button>
+                    </div>
                 </div>
             );
+
+            return null; 
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Dashboard />);
+        root.render(<App />);
     </script>
 </body>
 </html>
