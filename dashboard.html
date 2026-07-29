@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Ambulâncias HACO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
+        
+        :root {
+            --bg-base: #F8FAFC; 
+            --fab-blue: #003366; 
+            --fab-red: #DC2626;  
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: #0F172A; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Custom Scrollbar for Desktop */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .animate-fade { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // ⚠️ COLE SUA URL DA API AQUI (A mesma do app mobile)
+        const API_URL = "SUA_URL_AQUI";
+
+        // DADOS MOCKADOS (Exemplo visual para você ver como funciona antes de ligar à API)
+        const MOCK_DATA = [
+            {
+                id: 1, dataVerificacao: '2026-07-28', horaVerificacao: '07:00', tipo: 'BÁSICA (UPI)', placa: 'FAB-1234', resp: '1T MED SILVA', motorista: 'CB JOÃO', obsGerais: 'LACRE MOCHILA: 123456 | Viatura higienizada e pronta.', alertas: 0,
+                items: [
+                    { nome: 'Rádio Comunicador', status: 'OK', obs: '' },
+                    { nome: 'Módulo: EPI', status: 'OK', obs: '' }
+                ]
+            },
+            {
+                id: 2, dataVerificacao: '2026-07-28', horaVerificacao: '07:15', tipo: 'PAJÉ (TÁTICA)', placa: 'FAB-9988', resp: '2T ENF COSTA', motorista: 'S2 SOUZA', obsGerais: 'LACRE MOCHILA: 987654 | Necessário revisão na suspensão traseira.', alertas: 2,
+                items: [
+                    { nome: 'Módulo: HEMORRAGIA', status: 'FALTA', obs: 'Gaze hemostática vencida' },
+                    { nome: 'O2 Rede (Torpedo Grande)', status: 'TROCA', obs: 'Cilindro no amarelo' },
+                    { nome: 'Módulo: SUTURA', status: 'OK', obs: '' }
+                ]
+            },
+            {
+                id: 3, dataVerificacao: '2026-07-27', horaVerificacao: '19:00', tipo: 'AVANÇADA (UPA)', placa: 'FAB-5566', resp: 'MAJ MED LIMA', motorista: 'S1 PEREIRA', obsGerais: 'Plantão assumido sem intercorrências.', alertas: 0,
+                items: [
+                    { nome: 'Psicotrópicos/Controlados', status: 'C/ LACRE', obs: 'Lacre: 8877' },
+                    { nome: 'DEA (Pás e Bateria)', status: 'OK', obs: '' }
+                ]
+            }
+        ];
+
+        function Dashboard() {
+            const [data, setData] = useState(MOCK_DATA);
+            const [loading, setLoading] = useState(false);
+            const [filterAlerts, setFilterAlerts] = useState(false);
+            const [search, setSearch] = useState('');
+            const [selectedChecklist, setSelectedChecklist] = useState(null);
+
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [data, filterAlerts, selectedChecklist]);
+
+            // Lógica para buscar dados reais da API no futuro
+            const fetchHistory = async () => {
+                if(API_URL === "SUA_URL_AQUI") return; // Mantém o Mock se não tiver URL
+                setLoading(true);
+                try {
+                    const r = await fetch(`${API_URL}?action=read_history`);
+                    const result = await r.json();
+                    setData(result);
+                } catch (e) {
+                    console.error("Erro ao buscar dados", e);
+                }
+                setLoading(false);
+            };
+
+            const filteredData = useMemo(() => {
+                let filtered = data;
+                if (filterAlerts) {
+                    filtered = filtered.filter(d => d.alertas > 0);
+                }
+                if (search) {
+                    const s = search.toLowerCase();
+                    filtered = filtered.filter(d => 
+                        d.tipo.toLowerCase().includes(s) || 
+                        d.resp.toLowerCase().includes(s) || 
+                        d.motorista.toLowerCase().includes(s) ||
+                        d.placa.toLowerCase().includes(s)
+                    );
+                }
+                return filtered;
+            }, [data, filterAlerts, search]);
+
+            const stats = useMemo(() => {
+                const hoje = new Date().toISOString().split('T')[0];
+                const checksHoje = data.filter(d => d.dataVerificacao === hoje).length;
+                const comAlertas = data.filter(d => d.alertas > 0).length;
+                return { checksHoje, comAlertas, total: data.length };
+            }, [data]);
+
+            // Formata Data ISO para BR
+            const formatDate = (dateStr) => dateStr.split('-').reverse().join('/');
+
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-50">
+                    {/* Header Principal */}
+                    <header className="bg-[#003366] text-white p-5 shadow-md flex justify-between items-center z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white/10 p-2 rounded-lg"><i data-lucide="shield-check" className="w-8 h-8"></i></div>
+                            <div>
+                                <h1 className="text-xl font-black uppercase tracking-wider">Painel do Gestor - Ambulâncias</h1>
+                                <p className="text-xs text-blue-200 font-mono tracking-widest uppercase">Hospital de Aeronáutica de Canoas</p>
+                            </div>
+                        </div>
+                        <button onClick={fetchHistory} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded transition-colors text-sm font-bold">
+                            <i data-lucide="refresh-cw" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}></i> Atualizar Dados
+                        </button>
+                    </header>
+
+                    <main className="flex-1 p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        
+                        {/* Coluna Esquerda (Lista Principal) */}
+                        <div className="lg:col-span-8 space-y-6">
+                            
+                            {/* KPI Cards */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-blue-500">
+                                    <div className="bg-blue-50 p-3 rounded-full text-blue-600"><i data-lucide="clipboard-list"></i></div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total de Registros</p>
+                                        <p className="text-2xl font-black text-slate-800">{stats.total}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-emerald-500">
+                                    <div className="bg-emerald-50 p-3 rounded-full text-emerald-600"><i data-lucide="calendar-check"></i></div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Verificações Hoje</p>
+                                        <p className="text-2xl font-black text-slate-800">{stats.checksHoje}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-red-500">
+                                    <div className="bg-red-50 p-3 rounded-full text-red-600"><i data-lucide="alert-triangle"></i></div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Com Pendências</p>
+                                        <p className="text-2xl font-black text-red-600">{stats.comAlertas}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Barra de Filtros */}
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center gap-4">
+                                <div className="relative flex-1">
+                                    <i data-lucide="search" className="absolute left-3 top-3 text-slate-400 w-5 h-5"></i>
+                                    <input type="text" placeholder="Buscar por placa, responsável ou viatura..." 
+                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none font-medium"
+                                        value={search} onChange={e => setSearch(e.target.value)} />
+                                </div>
+                                <button onClick={() => setFilterAlerts(!filterAlerts)} 
+                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors border ${filterAlerts ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                                    <i data-lucide="filter" className="w-4 h-4"></i> {filterAlerts ? 'Mostrando Apenas Alertas' : 'Mostrar Apenas Alertas'}
+                                </button>
+                            </div>
+
+                            {/* Tabela de Histórico */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-slate-200">
+                                            <th className="p-4 text-xs font-black uppercase tracking-wider text-slate-500">Data/Hora</th>
+                                            <th className="p-4 text-xs font-black uppercase tracking-wider text-slate-500">Viatura</th>
+                                            <th className="p-4 text-xs font-black uppercase tracking-wider text-slate-500">Equipe</th>
+                                            <th className="p-4 text-xs font-black uppercase tracking-wider text-slate-500 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filteredData.length === 0 ? (
+                                            <tr><td colSpan="4" className="p-8 text-center text-slate-400 font-medium">Nenhum registro encontrado.</td></tr>
+                                        ) : filteredData.map(row => (
+                                            <tr key={row.id} onClick={() => setSelectedChecklist(row)} className={`hover:bg-blue-50 cursor-pointer transition-colors ${selectedChecklist?.id === row.id ? 'bg-blue-50' : ''}`}>
+                                                <td className="p-4">
+                                                    <p className="font-bold text-slate-800 text-sm">{formatDate(row.dataVerificacao)}</p>
+                                                    <p className="text-xs text-slate-500 font-mono">{row.horaVerificacao}</p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <p className="font-bold text-slate-800 text-sm">{row.tipo}</p>
+                                                    <p className="text-xs text-slate-500 font-mono uppercase">{row.placa}</p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <p className="text-sm font-bold text-slate-700 uppercase">{row.resp}</p>
+                                                    <p className="text-xs text-slate-500 uppercase">Mot: {row.motorista}</p>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    {row.alertas > 0 ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-200">
+                                                            <i data-lucide="triangle-alert" className="w-3 h-3"></i> {row.alertas} PENDÊNCIAS
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                                            <i data-lucide="check" className="w-3 h-3"></i> CONFORME
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Coluna Direita (Visualização de Detalhes) */}
+                        <div className="lg:col-span-4 relative">
+                            <div className="sticky top-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+                                {selectedChecklist ? (
+                                    <div className="animate-fade flex flex-col h-full">
+                                        <div className={`p-5 border-b flex justify-between items-start ${selectedChecklist.alertas > 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                                            <div>
+                                                <h2 className="font-black text-lg text-slate-800 uppercase">{selectedChecklist.tipo}</h2>
+                                                <p className="text-xs font-mono text-slate-600 mt-1">Realizado: {formatDate(selectedChecklist.dataVerificacao)} às {selectedChecklist.horaVerificacao}</p>
+                                            </div>
+                                            {selectedChecklist.alertas > 0 ? 
+                                                <i data-lucide="triangle-alert" className="text-red-500 w-8 h-8"></i> : 
+                                                <i data-lucide="badge-check" className="text-emerald-500 w-8 h-8"></i>
+                                            }
+                                        </div>
+                                        
+                                        <div className="p-5 overflow-y-auto flex-1 space-y-6">
+                                            {/* Observações e Lacre */}
+                                            <div>
+                                                <h3 className="text-xs font-black uppercase text-slate-400 mb-2 tracking-wider">Observações do Plantão</h3>
+                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 whitespace-pre-wrap">
+                                                    {selectedChecklist.obsGerais || "Nenhuma observação registrada."}
+                                                </div>
+                                            </div>
+
+                                            {/* Itens do Checklist */}
+                                            <div>
+                                                <h3 className="text-xs font-black uppercase text-slate-400 mb-3 tracking-wider">Relatório de Itens</h3>
+                                                <div className="space-y-3">
+                                                    {selectedChecklist.items.map((item, idx) => {
+                                                        const isAlert = !['OK', 'COMPLETA', 'LACRADO', 'MC>20', 'MC>40', 'C/ LACRE'].includes(item.status);
+                                                        return (
+                                                            <div key={idx} className={`p-3 rounded-lg border ${isAlert ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
+                                                                <div className="flex justify-between items-start">
+                                                                    <span className="text-xs font-bold text-slate-800 uppercase">{item.nome}</span>
+                                                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${isAlert ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                                                        {item.status}
+                                                                    </span>
+                                                                </div>
+                                                                {item.obs && (
+                                                                    <p className={`mt-2 text-xs font-medium ${isAlert ? 'text-red-700' : 'text-slate-500'}`}>
+                                                                        <i data-lucide="corner-down-right" className="w-3 h-3 inline mr-1"></i>
+                                                                        {item.obs}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-10 flex flex-col items-center justify-center text-center h-full opacity-50">
+                                        <i data-lucide="mouse-pointer-click" className="w-16 h-16 text-slate-400 mb-4"></i>
+                                        <p className="font-bold text-slate-500 uppercase tracking-wider text-sm">Selecione uma verificação na tabela<br/>para visualizar os detalhes.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
