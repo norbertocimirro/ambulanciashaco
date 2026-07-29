@@ -47,7 +47,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // ⚠️ SUA API ATUALIZADA AQUI ⚠️
+        // ⚠️ API CONECTADA ⚠️
         const API_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec";
 
         const VIATURAS = [
@@ -177,18 +177,18 @@
 
                 if(form.obs) texto += `\n📝 *Obs Gerais:* ${form.obs}`;
 
-                // Link direto da API do WhatsApp (Funciona melhor em Mobile)
                 const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
                 window.location.href = url;
             };
 
             if (view === 'menu') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade bg-slate-50">
-                    <div className="text-center space-y-3">
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade bg-slate-50 relative">
+                    <div className="text-center space-y-3 mt-8">
                         <div className="bg-[#003366] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl"><i data-lucide="activity" className="text-white w-10 h-10"></i></div>
                         <h1 className="text-4xl font-black uppercase tracking-tight text-[#003366]">Ambulâncias <span className="text-red-600">HACO</span></h1>
                         <p className="text-slate-500 font-mono text-xs uppercase tracking-widest font-bold">Verificação geral de Ambulâncias</p>
                     </div>
+                    
                     <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
                         {VIATURAS.map(v => (
                             <button key={v.id} onClick={() => start(v)} className={`t-panel p-6 rounded-xl flex items-center justify-between transition-all border-l-8 active:scale-95 ${v.border}`}>
@@ -197,6 +197,11 @@
                             </button>
                         ))}
                     </div>
+
+                    {/* LINK PARA A DASHBOARD DO GESTOR */}
+                    <a href="dashboard.html" className="mt-8 text-slate-400 font-bold uppercase text-[10px] tracking-widest pt-6 border-t border-slate-200 w-full max-w-xs flex items-center justify-center gap-2 hover:text-[#003366] transition-colors">
+                        <i data-lucide="lock" className="w-3 h-3"></i> Acesso Restrito (Gestão)
+                    </a>
                 </div>
             );
 
