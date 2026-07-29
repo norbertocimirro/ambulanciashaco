@@ -15,8 +15,8 @@
         :root {
             --bg-base: #F1F5F9; 
             --panel-base: #FFFFFF;
-            --fab-blue: #003366; /* Azul Aeronáutica */
-            --fab-red: #DC2626;  /* Vermelho Resgate */
+            --fab-blue: #003366; 
+            --fab-red: #DC2626;  
             --text-primary: #0F172A;
         }
 
@@ -47,10 +47,9 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // ⚠️ COLE SUA URL DO GOOGLE APPS SCRIPT/API AQUI ⚠️
-        const API_URL = "https://script.google.com/macros/s/AKfycbxwlH-21A7XOD17gyR0j7CApnmam4ZpViRH4rlVbBiSkqs754naFbiky81rjgrskQ0Y/exec";
+        // ⚠️ SUA API ATUALIZADA AQUI ⚠️
+        const API_URL = "https://script.google.com/macros/s/AKfycbzaxizVCggOIIjdUVyEz7Yk-8YemrsG5HZ9thMdl_DDzok2T120mggXfkZYj5S4PoAT/exec";
 
-        // PERFIS DE VIATURAS
         const VIATURAS = [
             { id: 'basica_upi', label: 'BÁSICA (UPI)', bg: 'bg-[#003366]', border: 'border-blue-300', tColor: 'text-white' },
             { id: 'avancada_upa', label: 'AVANÇADA (UPA)', bg: 'bg-[#DC2626]', border: 'border-red-300', tColor: 'text-white' },
@@ -97,7 +96,6 @@
                 const items = {};
                 CHECKLIST.filter(i => i.vias.includes(v.id)).forEach(i => items[i.id] = { status: i.opts[0], obs: '' });
                 
-                // Gera Data e Hora atuais
                 const now = new Date();
                 const dataFormatada = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                 const horaFormatada = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
@@ -117,7 +115,7 @@
                 const falha = Object.entries(form.items).find(([id, v]) => statusCriticos.includes(v.status) && v.obs.trim() === '');
                 if (falha) {
                     const nome = CHECKLIST.find(i => i.id === falha[0]).n;
-                    alert(`🔒 TRAVA DE AUDITORIA:\n\nItem: ${nome}\nStatus: ${falha[1].status}\n\nÉ OBRIGATÓRIO descrever o problema/falta na observação.`);
+                    alert(`🔒 TRAVA DE VERIFICAÇÃO:\n\nItem: ${nome}\nStatus: ${falha[1].status}\n\nÉ OBRIGATÓRIO descrever o problema/falta na observação.`);
                     return false;
                 }
                 return true;
@@ -140,13 +138,16 @@
                     obsGerais: obsComLacre,
                     items: Object.entries(form.items).map(([id, v]) => ({ nome: CHECKLIST.find(i => i.id === id).n, status: v.status, obs: v.obs }))
                 };
+                
                 try {
-                    if (API_URL !== "SUA_URL_AQUI") {
-                        await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                    }
+                    await fetch(API_URL, { 
+                        method: 'POST', 
+                        mode: 'no-cors',
+                        body: JSON.stringify(payload)
+                    });
                     setView('sucesso');
                 } catch (e) { 
-                    alert("ERRO DE REDE. Os dados não foram para a planilha, mas você pode enviar via WhatsApp."); 
+                    alert("ERRO: Houve um problema de rede. Tente enviar via WhatsApp."); 
                     setView('sucesso');
                 }
                 setLoading(false);
@@ -154,7 +155,6 @@
 
             const sendWhatsApp = () => {
                 const falhas = Object.entries(form.items).filter(([id, v]) => ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(v.status));
-                
                 const dataPtBr = form.data.split('-').reverse().join('/');
 
                 let texto = `*CHECKLIST AMBULÂNCIAS HACO - ${vSel.label}*\n`;
@@ -177,8 +177,9 @@
 
                 if(form.obs) texto += `\n📝 *Obs Gerais:* ${form.obs}`;
 
-                const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
-                window.open(url, '_blank');
+                // Link direto da API do WhatsApp (Funciona melhor em Mobile)
+                const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+                window.location.href = url;
             };
 
             if (view === 'menu') return (
@@ -293,14 +294,14 @@
             if (view === 'sucesso') return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 text-center animate-fade">
                     <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-inner"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
-                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-tight mb-2">AUDITORIA<br/>CONCLUÍDA</h1>
+                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-tight mb-2">VERIFICAÇÃO<br/>CONCLUÍDA</h1>
                     <p className="text-slate-500 mb-10 text-sm font-bold">O checklist foi validado e transmitido.</p>
                     
                     <div className="space-y-4 w-full max-w-xs">
-                        <button onClick={sendWhatsApp} className="w-full bg-[#25D366] text-white font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg border-bottom border-b-4 border-[#128C7E]">
+                        <button onClick={sendWhatsApp} type="button" className="w-full bg-[#25D366] text-white font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg border-bottom border-b-4 border-[#128C7E]">
                             <i data-lucide="share-2"></i> Reportar no WhatsApp
                         </button>
-                        <button onClick={() => { setView('menu'); window.location.reload(); }} className="w-full bg-slate-200 text-slate-700 font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
+                        <button onClick={() => { setView('menu'); window.location.reload(); }} type="button" className="w-full bg-slate-200 text-slate-700 font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
                             Início
                         </button>
                     </div>
