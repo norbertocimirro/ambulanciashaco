@@ -40,7 +40,7 @@
         // ⚠️ COLE SUA URL DA API AQUI (A mesma do app mobile)
         const API_URL = "SUA_URL_AQUI";
 
-        // DADOS MOCKADOS (Exemplo visual para você ver como funciona antes de ligar à API)
+        // DADOS MOCKADOS PARA EXEMPLO VISUAL
         const MOCK_DATA = [
             {
                 id: 1, dataVerificacao: '2026-07-28', horaVerificacao: '07:00', tipo: 'BÁSICA (UPI)', placa: 'FAB-1234', resp: '1T MED SILVA', motorista: 'CB JOÃO', obsGerais: 'LACRE MOCHILA: 123456 | Viatura higienizada e pronta.', alertas: 0,
@@ -67,15 +67,38 @@
         ];
 
         function Dashboard() {
+            // Estado de Login
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [loginError, setLoginError] = useState(false);
+
+            // Estados da Dashboard
             const [data, setData] = useState(MOCK_DATA);
             const [loading, setLoading] = useState(false);
             const [filterAlerts, setFilterAlerts] = useState(false);
             const [search, setSearch] = useState('');
             const [selectedChecklist, setSelectedChecklist] = useState(null);
 
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [data, filterAlerts, selectedChecklist]);
+            // Garante que os ícones sejam renderizados sempre que a tela atualizar
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    if (window.lucide) window.lucide.createIcons();
+                }, 50);
+                return () => clearTimeout(timer);
+            });
 
-            // Lógica para buscar dados reais da API no futuro
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (username.toLowerCase() === 'haco' && password === 'haco2026') {
+                    setIsAuthenticated(true);
+                    setLoginError(false);
+                } else {
+                    setLoginError(true);
+                    setPassword('');
+                }
+            };
+
             const fetchHistory = async () => {
                 if(API_URL === "SUA_URL_AQUI") return; // Mantém o Mock se não tiver URL
                 setLoading(true);
@@ -113,26 +136,72 @@
                 return { checksHoje, comAlertas, total: data.length };
             }, [data]);
 
-            // Formata Data ISO para BR
             const formatDate = (dateStr) => dateStr.split('-').reverse().join('/');
 
+            // ================= TELA DE LOGIN =================
+            if (!isAuthenticated) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 animate-fade">
+                        <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-xl max-w-sm w-full space-y-8 border-t-8 border-[#003366]">
+                            <div className="text-center">
+                                <div className="bg-[#003366] w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-md">
+                                    <i data-lucide="shield-check" className="text-white w-8 h-8"></i>
+                                </div>
+                                <h1 className="text-2xl font-black text-[#003366] uppercase tracking-tight">Ambulâncias HACO</h1>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Portal do Gestor</p>
+                            </div>
+
+                            {loginError && (
+                                <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded text-center border border-red-200 uppercase tracking-wider">
+                                    Credenciais inválidas.
+                                </div>
+                            )}
+
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="block text-[11px] font-black text-slate-500 uppercase mb-2 tracking-wider">Usuário</label>
+                                    <input type="text" value={username} onChange={e=>setUsername(e.target.value)} 
+                                        className="w-full p-4 border-2 border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-[#003366] text-sm font-bold text-slate-800" 
+                                        placeholder="Digite seu usuário" required />
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-black text-slate-500 uppercase mb-2 tracking-wider">Senha</label>
+                                    <input type="password" value={password} onChange={e=>setPassword(e.target.value)} 
+                                        className="w-full p-4 border-2 border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-[#003366] text-sm font-bold text-slate-800" 
+                                        placeholder="••••••••" required />
+                                </div>
+                            </div>
+
+                            <button type="submit" className="w-full bg-[#003366] text-white p-4 rounded-lg font-black uppercase tracking-widest hover:bg-blue-900 transition-all shadow-md active:scale-95 flex justify-center items-center gap-2">
+                                Acessar Painel <i data-lucide="arrow-right" className="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    </div>
+                );
+            }
+
+            // ================= DASHBOARD =================
             return (
-                <div className="min-h-screen flex flex-col bg-slate-50">
-                    {/* Header Principal */}
-                    <header className="bg-[#003366] text-white p-5 shadow-md flex justify-between items-center z-10">
+                <div className="min-h-screen flex flex-col bg-slate-50 animate-fade">
+                    <header className="bg-[#003366] text-white p-5 shadow-md flex justify-between items-center z-10 sticky top-0">
                         <div className="flex items-center gap-4">
-                            <div className="bg-white/10 p-2 rounded-lg"><i data-lucide="shield-check" className="w-8 h-8"></i></div>
+                            <div className="bg-white/10 p-2 rounded-lg"><i data-lucide="shield-check" className="w-7 h-7"></i></div>
                             <div>
-                                <h1 className="text-xl font-black uppercase tracking-wider">Painel do Gestor - Ambulâncias</h1>
-                                <p className="text-xs text-blue-200 font-mono tracking-widest uppercase">Hospital de Aeronáutica de Canoas</p>
+                                <h1 className="text-xl font-black uppercase tracking-wider">Painel de Auditoria</h1>
+                                <p className="text-[10px] text-blue-200 font-mono tracking-widest uppercase">Ambulâncias HACO</p>
                             </div>
                         </div>
-                        <button onClick={fetchHistory} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded transition-colors text-sm font-bold">
-                            <i data-lucide="refresh-cw" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}></i> Atualizar Dados
-                        </button>
+                        <div className="flex gap-4">
+                            <button onClick={fetchHistory} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider">
+                                <i data-lucide="refresh-cw" className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}></i> Atualizar
+                            </button>
+                            <button onClick={() => setIsAuthenticated(false)} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider shadow-sm">
+                                <i data-lucide="log-out" className="w-4 h-4"></i> Sair
+                            </button>
+                        </div>
                     </header>
 
-                    <main className="flex-1 p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <main className="flex-1 p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
                         
                         {/* Coluna Esquerda (Lista Principal) */}
                         <div className="lg:col-span-8 space-y-6">
@@ -142,21 +211,21 @@
                                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-blue-500">
                                     <div className="bg-blue-50 p-3 rounded-full text-blue-600"><i data-lucide="clipboard-list"></i></div>
                                     <div>
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total de Registros</p>
+                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Total de Registros</p>
                                         <p className="text-2xl font-black text-slate-800">{stats.total}</p>
                                     </div>
                                 </div>
                                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-emerald-500">
                                     <div className="bg-emerald-50 p-3 rounded-full text-emerald-600"><i data-lucide="calendar-check"></i></div>
                                     <div>
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Verificações Hoje</p>
+                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Verificações Hoje</p>
                                         <p className="text-2xl font-black text-slate-800">{stats.checksHoje}</p>
                                     </div>
                                 </div>
                                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-red-500">
                                     <div className="bg-red-50 p-3 rounded-full text-red-600"><i data-lucide="alert-triangle"></i></div>
                                     <div>
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Com Pendências</p>
+                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Com Pendências</p>
                                         <p className="text-2xl font-black text-red-600">{stats.comAlertas}</p>
                                     </div>
                                 </div>
@@ -165,14 +234,14 @@
                             {/* Barra de Filtros */}
                             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center gap-4">
                                 <div className="relative flex-1">
-                                    <i data-lucide="search" className="absolute left-3 top-3 text-slate-400 w-5 h-5"></i>
-                                    <input type="text" placeholder="Buscar por placa, responsável ou viatura..." 
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none font-medium"
+                                    <i data-lucide="search" className="absolute left-4 top-3.5 text-slate-400 w-5 h-5"></i>
+                                    <input type="text" placeholder="Buscar por placa, motorista, responsável..." 
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-[#003366] outline-none font-bold text-slate-700"
                                         value={search} onChange={e => setSearch(e.target.value)} />
                                 </div>
                                 <button onClick={() => setFilterAlerts(!filterAlerts)} 
-                                    className={`px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors border ${filterAlerts ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                                    <i data-lucide="filter" className="w-4 h-4"></i> {filterAlerts ? 'Mostrando Apenas Alertas' : 'Mostrar Apenas Alertas'}
+                                    className={`px-5 py-3 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-colors border ${filterAlerts ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                                    <i data-lucide="filter" className="w-4 h-4"></i> {filterAlerts ? 'Mostrando PENDÊNCIAS' : 'Filtrar PENDÊNCIAS'}
                                 </button>
                             </div>
 
@@ -180,37 +249,37 @@
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="bg-slate-50 border-b border-slate-200">
-                                            <th className="p-4 text-xs font-black uppercase tracking-wider text-slate-500">Data/Hora</th>
-                                            <th className="p-4 text-xs font-black uppercase tracking-wider text-slate-500">Viatura</th>
-                                            <th className="p-4 text-xs font-black uppercase tracking-wider text-slate-500">Equipe</th>
-                                            <th className="p-4 text-xs font-black uppercase tracking-wider text-slate-500 text-center">Status</th>
+                                        <tr className="bg-slate-100 border-b border-slate-200">
+                                            <th className="p-4 text-[11px] font-black uppercase tracking-wider text-slate-500">Data / Hora</th>
+                                            <th className="p-4 text-[11px] font-black uppercase tracking-wider text-slate-500">Viatura</th>
+                                            <th className="p-4 text-[11px] font-black uppercase tracking-wider text-slate-500">Equipe</th>
+                                            <th className="p-4 text-[11px] font-black uppercase tracking-wider text-slate-500 text-center">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {filteredData.length === 0 ? (
-                                            <tr><td colSpan="4" className="p-8 text-center text-slate-400 font-medium">Nenhum registro encontrado.</td></tr>
+                                            <tr><td colSpan="4" className="p-8 text-center text-slate-400 font-bold uppercase text-xs tracking-wider">Nenhum registro encontrado.</td></tr>
                                         ) : filteredData.map(row => (
-                                            <tr key={row.id} onClick={() => setSelectedChecklist(row)} className={`hover:bg-blue-50 cursor-pointer transition-colors ${selectedChecklist?.id === row.id ? 'bg-blue-50' : ''}`}>
+                                            <tr key={row.id} onClick={() => setSelectedChecklist(row)} className={`hover:bg-blue-50 cursor-pointer transition-colors ${selectedChecklist?.id === row.id ? 'bg-blue-50 border-l-4 border-l-[#003366]' : 'border-l-4 border-l-transparent'}`}>
                                                 <td className="p-4">
                                                     <p className="font-bold text-slate-800 text-sm">{formatDate(row.dataVerificacao)}</p>
                                                     <p className="text-xs text-slate-500 font-mono">{row.horaVerificacao}</p>
                                                 </td>
                                                 <td className="p-4">
-                                                    <p className="font-bold text-slate-800 text-sm">{row.tipo}</p>
+                                                    <p className="font-black text-slate-800 text-sm tracking-tight">{row.tipo}</p>
                                                     <p className="text-xs text-slate-500 font-mono uppercase">{row.placa}</p>
                                                 </td>
                                                 <td className="p-4">
-                                                    <p className="text-sm font-bold text-slate-700 uppercase">{row.resp}</p>
-                                                    <p className="text-xs text-slate-500 uppercase">Mot: {row.motorista}</p>
+                                                    <p className="text-xs font-bold text-slate-700 uppercase">Resp: {row.resp}</p>
+                                                    <p className="text-xs font-bold text-slate-500 uppercase mt-0.5">Mot: {row.motorista}</p>
                                                 </td>
                                                 <td className="p-4 text-center">
                                                     {row.alertas > 0 ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-red-100 text-red-700 border border-red-200">
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black bg-red-100 text-red-700 border border-red-200 tracking-wider">
                                                             <i data-lucide="triangle-alert" className="w-3 h-3"></i> {row.alertas} PENDÊNCIAS
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-700 border border-emerald-200 tracking-wider">
                                                             <i data-lucide="check" className="w-3 h-3"></i> CONFORME
                                                         </span>
                                                     )}
@@ -224,45 +293,49 @@
 
                         {/* Coluna Direita (Visualização de Detalhes) */}
                         <div className="lg:col-span-4 relative">
-                            <div className="sticky top-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+                            <div className="sticky top-24 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col max-h-[80vh]">
                                 {selectedChecklist ? (
-                                    <div className="animate-fade flex flex-col h-full">
-                                        <div className={`p-5 border-b flex justify-between items-start ${selectedChecklist.alertas > 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                                    /* ⚠️ IMPORTANTE: A key={selectedChecklist.id} abaixo recria a tela e EVITA o bug da tela branca */
+                                    <div className="animate-fade flex flex-col h-full" key={selectedChecklist.id}>
+                                        <div className={`p-6 border-b flex justify-between items-start ${selectedChecklist.alertas > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
                                             <div>
-                                                <h2 className="font-black text-lg text-slate-800 uppercase">{selectedChecklist.tipo}</h2>
-                                                <p className="text-xs font-mono text-slate-600 mt-1">Realizado: {formatDate(selectedChecklist.dataVerificacao)} às {selectedChecklist.horaVerificacao}</p>
+                                                <h2 className="font-black text-xl text-slate-800 uppercase tracking-tight">{selectedChecklist.tipo}</h2>
+                                                <p className="text-xs font-mono font-bold text-slate-600 mt-1">Realizado: {formatDate(selectedChecklist.dataVerificacao)} às {selectedChecklist.horaVerificacao}</p>
+                                                <p className="text-xs font-bold text-slate-500 mt-2 uppercase">Viatura: {selectedChecklist.placa}</p>
                                             </div>
-                                            {selectedChecklist.alertas > 0 ? 
-                                                <i data-lucide="triangle-alert" className="text-red-500 w-8 h-8"></i> : 
-                                                <i data-lucide="badge-check" className="text-emerald-500 w-8 h-8"></i>
-                                            }
+                                            <div className="bg-white p-2 rounded-lg shadow-sm">
+                                                {selectedChecklist.alertas > 0 ? 
+                                                    <i data-lucide="triangle-alert" className="text-red-600 w-8 h-8"></i> : 
+                                                    <i data-lucide="badge-check" className="text-emerald-600 w-8 h-8"></i>
+                                                }
+                                            </div>
                                         </div>
                                         
-                                        <div className="p-5 overflow-y-auto flex-1 space-y-6">
+                                        <div className="p-6 overflow-y-auto flex-1 space-y-6">
                                             {/* Observações e Lacre */}
                                             <div>
-                                                <h3 className="text-xs font-black uppercase text-slate-400 mb-2 tracking-wider">Observações do Plantão</h3>
-                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 whitespace-pre-wrap">
-                                                    {selectedChecklist.obsGerais || "Nenhuma observação registrada."}
+                                                <h3 className="text-[11px] font-black uppercase text-slate-400 mb-2 tracking-widest flex items-center gap-2"><i data-lucide="message-square" className="w-4 h-4"></i> Relatório Geral</h3>
+                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 whitespace-pre-wrap">
+                                                    {selectedChecklist.obsGerais || "Nenhuma observação registrada pelo plantão."}
                                                 </div>
                                             </div>
 
                                             {/* Itens do Checklist */}
                                             <div>
-                                                <h3 className="text-xs font-black uppercase text-slate-400 mb-3 tracking-wider">Relatório de Itens</h3>
+                                                <h3 className="text-[11px] font-black uppercase text-slate-400 mb-3 tracking-widest flex items-center gap-2"><i data-lucide="list-checks" className="w-4 h-4"></i> Itens da Auditoria</h3>
                                                 <div className="space-y-3">
                                                     {selectedChecklist.items.map((item, idx) => {
                                                         const isAlert = !['OK', 'COMPLETA', 'LACRADO', 'MC>20', 'MC>40', 'C/ LACRE'].includes(item.status);
                                                         return (
-                                                            <div key={idx} className={`p-3 rounded-lg border ${isAlert ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
-                                                                <div className="flex justify-between items-start">
-                                                                    <span className="text-xs font-bold text-slate-800 uppercase">{item.nome}</span>
-                                                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${isAlert ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                                            <div key={idx} className={`p-3 rounded-lg border-2 ${isAlert ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100'}`}>
+                                                                <div className="flex justify-between items-start gap-2">
+                                                                    <span className={`text-xs font-black uppercase ${isAlert ? 'text-red-900' : 'text-slate-700'}`}>{item.nome}</span>
+                                                                    <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm whitespace-nowrap uppercase ${isAlert ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
                                                                         {item.status}
                                                                     </span>
                                                                 </div>
                                                                 {item.obs && (
-                                                                    <p className={`mt-2 text-xs font-medium ${isAlert ? 'text-red-700' : 'text-slate-500'}`}>
+                                                                    <p className={`mt-2 text-xs font-bold ${isAlert ? 'text-red-700' : 'text-slate-500'}`}>
                                                                         <i data-lucide="corner-down-right" className="w-3 h-3 inline mr-1"></i>
                                                                         {item.obs}
                                                                     </p>
@@ -275,9 +348,11 @@
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="p-10 flex flex-col items-center justify-center text-center h-full opacity-50">
-                                        <i data-lucide="mouse-pointer-click" className="w-16 h-16 text-slate-400 mb-4"></i>
-                                        <p className="font-bold text-slate-500 uppercase tracking-wider text-sm">Selecione uma verificação na tabela<br/>para visualizar os detalhes.</p>
+                                    <div className="p-10 flex flex-col items-center justify-center text-center h-full opacity-60">
+                                        <div className="bg-slate-100 p-4 rounded-full mb-4">
+                                            <i data-lucide="mouse-pointer-click" className="w-10 h-10 text-slate-400"></i>
+                                        </div>
+                                        <p className="font-black text-slate-500 uppercase tracking-widest text-xs">Selecione uma verificação na tabela<br/>para visualizar os detalhes</p>
                                     </div>
                                 )}
                             </div>
