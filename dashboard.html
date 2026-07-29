@@ -18,10 +18,10 @@
             --fab-red: #DC2626;  
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: #0F172A; overflow: hidden; /* Prevent page double scroll */ }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: #0F172A; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* Custom Scrollbar */
+        /* Custom Scrollbar - Fina e Elegante para o Desktop */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -178,8 +178,8 @@
 
             // ================= DASHBOARD =================
             return (
-                <div className="h-screen flex flex-col bg-slate-50 animate-fade">
-                    <header className="bg-[#003366] text-white p-5 shadow-md flex justify-between items-center z-10 flex-shrink-0">
+                <div className="min-h-screen flex flex-col bg-slate-50 animate-fade">
+                    <header className="bg-[#003366] text-white p-5 shadow-md flex justify-between items-center z-50 sticky top-0 h-[80px]">
                         <div className="flex items-center gap-4">
                             <div className="bg-white/10 p-2 rounded-lg"><i data-lucide="shield-check" className="w-7 h-7"></i></div>
                             <div>
@@ -197,16 +197,18 @@
                         </div>
                     </header>
 
-                    <main className="flex-1 p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+                    {/* ALINHAMENTO FIXADO PARA O GRID */}
+                    <main className="flex-1 p-6 max-w-[1400px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                         
-                        {/* Coluna Esquerda */}
-                        <div className="lg:col-span-8 flex flex-col h-full space-y-5 overflow-y-auto pr-2 pb-10">
+                        {/* Coluna Esquerda: Acompanha o Scroll da Página normalmente */}
+                        <div className="lg:col-span-8 space-y-6">
                             
-                            <div className="grid grid-cols-3 gap-4 flex-shrink-0">
+                            {/* KPI Cards */}
+                            <div className="grid grid-cols-3 gap-4">
                                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-blue-500">
                                     <div className="bg-blue-50 p-3 rounded-full text-blue-600"><i data-lucide="clipboard-list"></i></div>
                                     <div>
-                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Total de Registros</p>
+                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Total Registros</p>
                                         <p className="text-2xl font-black text-slate-800">{stats.total}</p>
                                     </div>
                                 </div>
@@ -220,22 +222,22 @@
                                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 border-l-4 border-red-500">
                                     <div className="bg-red-50 p-3 rounded-full text-red-600"><i data-lucide="alert-triangle"></i></div>
                                     <div>
-                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Com Pendências</p>
+                                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">Pendências</p>
                                         <p className="text-2xl font-black text-red-600">{stats.comAlertas}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* NOVIDADE: ALERTA DE TURNOS */}
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex-shrink-0">
+                            {/* ALERTA DE TURNOS */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                 <div className="bg-slate-50 border-b border-slate-200 p-3">
                                     <h3 className="text-xs font-black uppercase text-slate-600 tracking-wider flex items-center gap-2">
-                                        <i data-lucide="clock" className="w-4 h-4 text-blue-600"></i> Controle de Turnos (Status de Hoje)
+                                        <i data-lucide="clock" className="w-4 h-4 text-[#003366]"></i> Controle de Turnos (Status de Hoje)
                                     </h3>
                                 </div>
                                 <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {turnosData.map(v => (
-                                        <div key={v.label} className="border border-slate-100 rounded-lg p-3">
+                                        <div key={v.label} className="border border-slate-100 rounded-lg p-3 shadow-sm">
                                             <h4 className="text-[11px] font-black uppercase text-[#003366] tracking-tight mb-3 text-center">{v.label}</h4>
                                             <div className="flex justify-between gap-2">
                                                 <div className="flex flex-col items-center flex-1">
@@ -256,68 +258,70 @@
                                 </div>
                             </div>
 
-                            <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center gap-4 flex-shrink-0">
+                            {/* Barra de Filtros */}
+                            <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center gap-4">
                                 <div className="relative flex-1">
                                     <i data-lucide="search" className="absolute left-4 top-3 text-slate-400 w-4 h-4"></i>
                                     <input type="text" placeholder="Buscar por placa, motorista..." className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-[#003366] outline-none font-bold text-slate-700" value={search} onChange={e => setSearch(e.target.value)} />
                                 </div>
-                                <button onClick={() => setFilterAlerts(!filterAlerts)} className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-colors border ${filterAlerts ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                                <button onClick={() => setFilterAlerts(!filterAlerts)} className={`px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-colors border ${filterAlerts ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
                                     <i data-lucide="filter" className="w-4 h-4"></i> {filterAlerts ? 'Mostrando PENDÊNCIAS' : 'Filtrar PENDÊNCIAS'}
                                 </button>
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
-                                <div className="overflow-y-auto">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="bg-slate-100 border-b border-slate-200 sticky top-0">
-                                                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500">Data / Hora</th>
-                                                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500">Viatura</th>
-                                                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500">Equipe</th>
-                                                <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 text-center">Status</th>
+                            {/* Tabela de Histórico */}
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-10">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-100 border-b border-slate-200">
+                                            <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500">Data / Hora</th>
+                                            <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500">Viatura</th>
+                                            <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500">Equipe</th>
+                                            <th className="p-4 text-[10px] font-black uppercase tracking-wider text-slate-500 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filteredData.length === 0 ? (
+                                            <tr><td colSpan="4" className="p-8 text-center text-slate-400 font-bold uppercase text-xs tracking-wider">{loading ? 'Carregando dados da API...' : 'Nenhum registro encontrado.'}</td></tr>
+                                        ) : filteredData.map((row, index) => (
+                                            <tr key={row.id || index} onClick={() => setSelectedChecklist(row)} className={`hover:bg-blue-50 cursor-pointer transition-colors ${selectedChecklist?.id === row.id ? 'bg-blue-50 border-l-4 border-l-[#003366]' : 'border-l-4 border-l-transparent'}`}>
+                                                <td className="p-4">
+                                                    <p className="font-bold text-slate-800 text-sm">{formatDate(row.dataVerificacao)}</p>
+                                                    <p className="text-xs text-slate-500 font-mono">{row.horaVerificacao}</p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <p className="font-black text-slate-800 text-sm tracking-tight">{row.tipo}</p>
+                                                    <p className="text-xs text-slate-500 font-mono uppercase">{row.placa}</p>
+                                                </td>
+                                                <td className="p-4">
+                                                    <p className="text-xs font-bold text-slate-700 uppercase">Resp: {row.resp}</p>
+                                                    <p className="text-xs font-bold text-slate-500 uppercase mt-0.5">Mot: {row.motorista}</p>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    {row.alertas > 0 ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black bg-red-100 text-red-700 border border-red-200 tracking-wider">
+                                                            <i data-lucide="triangle-alert" className="w-3 h-3"></i> {row.alertas} PENDÊNCIAS
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-700 border border-emerald-200 tracking-wider">
+                                                            <i data-lucide="check" className="w-3 h-3"></i> CONFORME
+                                                        </span>
+                                                    )}
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {filteredData.length === 0 ? (
-                                                <tr><td colSpan="4" className="p-8 text-center text-slate-400 font-bold uppercase text-xs tracking-wider">{loading ? 'Carregando dados da API...' : 'Nenhum registro encontrado.'}</td></tr>
-                                            ) : filteredData.map((row, index) => (
-                                                <tr key={row.id || index} onClick={() => setSelectedChecklist(row)} className={`hover:bg-blue-50 cursor-pointer transition-colors ${selectedChecklist?.id === row.id ? 'bg-blue-50 border-l-4 border-l-[#003366]' : 'border-l-4 border-l-transparent'}`}>
-                                                    <td className="p-4">
-                                                        <p className="font-bold text-slate-800 text-sm">{formatDate(row.dataVerificacao)}</p>
-                                                        <p className="text-xs text-slate-500 font-mono">{row.horaVerificacao}</p>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <p className="font-black text-slate-800 text-sm tracking-tight">{row.tipo}</p>
-                                                        <p className="text-xs text-slate-500 font-mono uppercase">{row.placa}</p>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <p className="text-xs font-bold text-slate-700 uppercase">Resp: {row.resp}</p>
-                                                        <p className="text-xs font-bold text-slate-500 uppercase mt-0.5">Mot: {row.motorista}</p>
-                                                    </td>
-                                                    <td className="p-4 text-center">
-                                                        {row.alertas > 0 ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black bg-red-100 text-red-700 border border-red-200 tracking-wider">
-                                                                <i data-lucide="triangle-alert" className="w-3 h-3"></i> {row.alertas} PENDÊNCIAS
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-700 border border-emerald-200 tracking-wider">
-                                                                <i data-lucide="check" className="w-3 h-3"></i> CONFORME
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
-                        {/* Coluna Direita - SOLUÇÃO DO SCROLL */}
-                        <div className="lg:col-span-4 relative h-full pb-10">
-                            <div className="bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col h-full max-h-full">
+                        {/* Coluna Direita: O SEGREDO DO SCROLL ESTÁ AQUI (Fica fixo na tela) */}
+                        <div className="lg:col-span-4 sticky top-[104px] h-[calc(100vh-128px)]">
+                            <div className="bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col h-full overflow-hidden">
                                 {selectedChecklist ? (
-                                    <div className="animate-fade flex flex-col h-full" key={selectedChecklist.id || Math.random()}>
+                                    <div className="animate-fade flex flex-col h-full overflow-hidden" key={selectedChecklist.id || Math.random()}>
+                                        
+                                        {/* Cabeçalho Fixo */}
                                         <div className={`p-6 border-b flex justify-between items-start flex-shrink-0 ${selectedChecklist.alertas > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
                                             <div>
                                                 <h2 className="font-black text-xl text-slate-800 uppercase tracking-tight">{selectedChecklist.tipo}</h2>
@@ -329,7 +333,8 @@
                                             </div>
                                         </div>
                                         
-                                        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                                        {/* Conteúdo com SCROLL INTERNO ATIVADO */}
+                                        <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-white">
                                             <div>
                                                 <h3 className="text-[11px] font-black uppercase text-slate-400 mb-2 tracking-widest flex items-center gap-2"><i data-lucide="message-square" className="w-4 h-4"></i> Relatório Geral</h3>
                                                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 whitespace-pre-wrap">
@@ -339,7 +344,7 @@
 
                                             <div>
                                                 <h3 className="text-[11px] font-black uppercase text-slate-400 mb-3 tracking-widest flex items-center gap-2"><i data-lucide="list-checks" className="w-4 h-4"></i> Itens da Verificação</h3>
-                                                <div className="space-y-3 pb-4">
+                                                <div className="space-y-3 pb-6">
                                                     {(selectedChecklist.items || []).map((item, idx) => {
                                                         const isAlert = !['OK', 'COMPLETA', 'LACRADO', 'MC>20', 'MC>40', 'C/ LACRE'].includes(item.status);
                                                         return (
