@@ -182,24 +182,23 @@
             };
 
             if (view === 'menu') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade bg-slate-50 relative">
-                    <div className="text-center space-y-3 mt-8">
-                        <div className="bg-[#003366] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl"><i data-lucide="activity" className="text-white w-10 h-10"></i></div>
-                        <h1 className="text-4xl font-black uppercase tracking-tight text-[#003366]">Ambulâncias <span className="text-red-600">HACO</span></h1>
-                        <p className="text-slate-500 font-mono text-xs uppercase tracking-widest font-bold">Verificação geral de Ambulâncias</p>
+                <div className="min-h-screen flex flex-col items-center justify-center p-5 space-y-10 animate-fade bg-slate-50 relative">
+                    <div className="text-center space-y-2 mt-6">
+                        <div className="bg-[#003366] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-xl"><i data-lucide="activity" className="text-white w-8 h-8"></i></div>
+                        <h1 className="text-3xl font-black uppercase tracking-tight text-[#003366]">Ambulâncias <span className="text-red-600">HACO</span></h1>
+                        <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest font-bold">Verificação geral de Ambulâncias</p>
                     </div>
                     
-                    <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
+                    <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
                         {VIATURAS.map(v => (
-                            <button key={v.id} onClick={() => start(v)} className={`t-panel p-6 rounded-xl flex items-center justify-between transition-all border-l-8 active:scale-95 ${v.border}`}>
-                                <span className={`font-black text-xl uppercase tracking-tight text-slate-800`}>{v.label}</span>
-                                <i data-lucide="ambulance" className="text-slate-400 w-8 h-8"></i>
+                            <button key={v.id} onClick={() => start(v)} className={`t-panel p-5 rounded-xl flex items-center justify-between transition-all border-l-8 active:scale-95 ${v.border}`}>
+                                <span className={`font-black text-lg uppercase tracking-tight text-slate-800`}>{v.label}</span>
+                                <i data-lucide="ambulance" className="text-slate-400 w-6 h-6"></i>
                             </button>
                         ))}
                     </div>
 
-                    {/* LINK PARA A DASHBOARD DO GESTOR */}
-                    <a href="dashboard.html" className="mt-8 text-slate-400 font-bold uppercase text-[10px] tracking-widest pt-6 border-t border-slate-200 w-full max-w-xs flex items-center justify-center gap-2 hover:text-[#003366] transition-colors">
+                    <a href="dashboard.html" className="mt-6 text-slate-400 font-bold uppercase text-[10px] tracking-widest pt-5 border-t border-slate-200 w-full max-w-xs flex items-center justify-center gap-2 hover:text-[#003366] transition-colors">
                         <i data-lucide="lock" className="w-3 h-3"></i> Acesso Restrito (Gestão)
                     </a>
                 </div>
@@ -211,100 +210,108 @@
                 const categoryName = CATEGORIES[step];
 
                 return (
-                    <div className="min-h-screen flex flex-col bg-slate-50 pb-32 animate-fade">
-                        <header className={`p-4 ${vSel.bg} shadow-md flex justify-between items-center sticky top-0 z-50`}>
-                            <button onClick={() => setView('menu')} className="p-2 bg-black/20 rounded text-white active:bg-black/40"><i data-lucide="x"></i></button>
-                            <h1 className={`font-black uppercase text-sm tracking-widest text-center flex-1 text-white`}>{vSel.label}</h1>
-                            <span className="font-mono text-[11px] font-bold px-3 py-1.5 rounded-full bg-white/20 text-white">{step + 1}/{CATEGORIES.length}</span>
+                    <div className="min-h-screen flex flex-col bg-slate-50 pb-24 animate-fade">
+                        <header className={`p-3 ${vSel.bg} shadow-md flex justify-between items-center sticky top-0 z-50`}>
+                            <button onClick={() => setView('menu')} className="p-1.5 bg-black/20 rounded text-white active:bg-black/40"><i data-lucide="x" className="w-5 h-5"></i></button>
+                            <h1 className={`font-black uppercase text-[13px] tracking-widest text-center flex-1 text-white`}>{vSel.label}</h1>
+                            <span className="font-mono text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">{step + 1}/{CATEGORIES.length}</span>
                         </header>
 
-                        <main className="p-4 space-y-5 flex-1 overflow-y-auto no-scrollbar mt-2 max-w-2xl mx-auto w-full">
-                            <h2 className="text-sm font-black uppercase text-slate-500 tracking-wider mb-6 flex items-center gap-2 border-b-2 border-slate-200 pb-2">
-                                <i data-lucide="layers" className="w-5 h-5 text-[#003366]"></i> {categoryName}
+                        <main className="p-3 space-y-4 flex-1 overflow-y-auto no-scrollbar mt-2 max-w-2xl mx-auto w-full">
+                            <h2 className="text-xs font-black uppercase text-slate-500 tracking-wider mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
+                                <i data-lucide="layers" className="w-4 h-4 text-[#003366]"></i> {categoryName}
                             </h2>
 
                             {step === 0 && (
-                                <div className="space-y-4 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase"><i data-lucide="calendar" className="w-3 h-3 inline"></i> Data e Hora da Verificação</label>
-                                    <div className="grid grid-cols-2 gap-3 mb-3">
-                                        <input type="date" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold text-slate-900 focus:border-[#003366] outline-none" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
-                                        <input type="time" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold text-slate-900 focus:border-[#003366] outline-none" value={form.hora} onChange={e => setForm({...form, hora: e.target.value})} />
+                                <div className="space-y-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1"><i data-lucide="calendar" className="w-3 h-3 inline"></i> Data e Hora</label>
+                                        <div className="flex gap-2">
+                                            <input type="date" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-900 focus:border-[#003366] outline-none" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
+                                            <input type="time" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-900 focus:border-[#003366] outline-none" value={form.hora} onChange={e => setForm({...form, hora: e.target.value})} />
+                                        </div>
                                     </div>
 
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-4">Identificação da Viatura</label>
-                                    <input type="text" placeholder="EX: VTR-01 / PLACA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-mono font-bold text-xl uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
-                                    
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Identificação da Viatura</label>
+                                        <input type="text" placeholder="EX: VTR-01 / PLACA" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold text-base uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
+                                    </div>
+
                                     {vSel.id !== 'avancada_upa' && (
-                                        <>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase mt-4 text-red-600"><i data-lucide="lock" className="w-3 h-3 inline"></i> Lacre da Mochila</label>
-                                            <input type="text" placeholder="Nº DO LACRE" className="w-full p-4 bg-red-50 border-2 border-red-200 rounded-lg font-mono font-bold text-xl uppercase text-red-900 placeholder:text-red-300 focus:border-red-500 outline-none" value={form.lacre} onChange={e => setForm({...form, lacre: e.target.value.toUpperCase()})} />
-                                        </>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-red-600 uppercase mb-1"><i data-lucide="lock" className="w-3 h-3 inline"></i> Lacre da Mochila</label>
+                                            <input type="text" placeholder="Nº DO LACRE" className="w-full p-3 bg-red-50 border border-red-200 rounded-lg font-mono font-bold text-base uppercase text-red-900 placeholder:text-red-300 focus:border-red-500 outline-none" value={form.lacre} onChange={e => setForm({...form, lacre: e.target.value.toUpperCase()})} />
+                                        </div>
                                     )}
 
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-4">Equipe</label>
-                                    <div className="grid grid-cols-2 gap-3 mb-3">
-                                        <input type="text" placeholder="POSTO/GRAD (RESP)" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
-                                        <input type="text" placeholder="GUERRA (RESP)" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Equipe</label>
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <input type="text" placeholder="POSTO/GRAD" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.posto} onChange={e => setForm({...form, posto: e.target.value.toUpperCase()})} />
+                                            <input type="text" placeholder="GUERRA (RESP)" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.guerra} onChange={e => setForm({...form, guerra: e.target.value.toUpperCase()})} />
+                                        </div>
+                                        <input type="text" placeholder="GUERRA DO MOTORISTA" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.motorista} onChange={e => setForm({...form, motorista: e.target.value.toUpperCase()})} />
                                     </div>
-                                    <input type="text" placeholder="NOME DE GUERRA DO MOTORISTA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.motorista} onChange={e => setForm({...form, motorista: e.target.value.toUpperCase()})} />
                                 </div>
                             )}
 
                             {items.map(i => {
-                                const isModuleClass = step === 1 && vSel.id !== 'avancada_upa' ? 'module-bag bg-white p-5 mt-4' : 't-panel p-5 rounded-xl';
+                                const isModuleClass = step === 1 && vSel.id !== 'avancada_upa' ? 'module-bag bg-white p-4 mt-4' : 't-panel p-4 rounded-xl';
                                 
                                 return (
-                                <div key={i.id} className={`${isModuleClass} space-y-4`}>
-                                    <span className={`font-black text-sm uppercase tracking-wider block ${step === 1 && vSel.id !== 'avancada_upa' ? 'text-center text-[#003366]' : 'text-slate-700'}`}>{i.n}</span>
-                                    <div className="flex gap-2 pt-2">
+                                <div key={i.id} className={`${isModuleClass} space-y-3`}>
+                                    <span className={`font-black text-xs uppercase tracking-wider block ${step === 1 && vSel.id !== 'avancada_upa' ? 'text-center text-[#003366]' : 'text-slate-700'}`}>{i.n}</span>
+                                    
+                                    {/* FLEX-WRAP AQUI - Garante que os botões não vazem pra fora da tela no mobile */}
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
                                         {i.opts.map(opt => {
                                             const isF = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(opt);
                                             const isSelected = form.items[i.id].status === opt;
                                             return (
                                                 <button key={opt} onClick={() => setForm({...form, items: {...form.items, [i.id]: { ...form.items[i.id], status: opt }}})} 
-                                                    className={`py-3 px-2 rounded-lg font-bold text-xs flex-1 transition-all ${isSelected ? (isF ? 'btn-danger shadow-md' : 'btn-success shadow-md') : 'bg-slate-100 text-slate-500 border border-slate-300'}`}>
+                                                    className={`py-2 px-2 rounded-lg font-bold text-[10px] flex-1 min-w-[30%] transition-all ${isSelected ? (isF ? 'btn-danger shadow-md' : 'btn-success shadow-md') : 'bg-slate-100 text-slate-500 border border-slate-300'}`}>
                                                     {opt}
                                                 </button>
                                             )
                                         })}
                                     </div>
                                     <input type="text" placeholder="📝 Anotar Falta, Validade ou Obs..." 
-                                        className={`w-full p-3 border-2 rounded-lg text-sm font-bold outline-none transition-all ${['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(form.items[i.id].status) ? 'bg-red-50 border-red-300 text-red-900 placeholder:text-red-400' : 'bg-slate-50 border-slate-200 text-slate-700 focus:border-[#003366]'}`} 
+                                        className={`w-full p-2.5 border rounded-lg text-xs font-bold outline-none transition-all ${['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(form.items[i.id].status) ? 'bg-red-50 border-red-300 text-red-900 placeholder:text-red-400' : 'bg-slate-50 border-slate-200 text-slate-700 focus:border-[#003366]'}`} 
                                         value={form.items[i.id].obs} onChange={e => setForm({...form, items: {...form.items, [i.id]: {...form.items[i.id], obs: e.target.value}}})} />
                                 </div>
                             )})}
                             
                             {isFinal && (
-                                <div className="space-y-6 animate-fade mt-6">
-                                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                                        <h3 className="font-bold text-slate-700 text-xs uppercase mb-3 tracking-wider flex items-center gap-2"><i data-lucide="message-square" className="w-4 h-4"></i> Observações do Plantão</h3>
-                                        <textarea rows="4" placeholder="Descreva manutenções pendentes, intercorrências ou avisos para o próximo plantão..." className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg text-slate-900 text-sm outline-none focus:border-[#003366]" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
+                                <div className="space-y-4 animate-fade mt-6">
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                                        <h3 className="font-bold text-slate-700 text-[11px] uppercase mb-2 tracking-wider flex items-center gap-2"><i data-lucide="message-square" className="w-3 h-3"></i> Observações do Plantão</h3>
+                                        <textarea rows="4" placeholder="Descreva manutenções pendentes, intercorrências ou avisos..." className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs outline-none focus:border-[#003366]" value={form.obs} onChange={e => setForm({...form, obs: e.target.value})}></textarea>
                                     </div>
                                     
-                                    <button onClick={sendApi} disabled={loading} className="w-full btn-t-primary py-5 rounded-xl text-sm font-black uppercase tracking-widest flex justify-center items-center gap-2 shadow-lg">
-                                        {loading ? <i data-lucide="loader-2" className="animate-spin"></i> : <><i data-lucide="send"></i> TRANSMITIR DADOS</>}
+                                    <button onClick={sendApi} disabled={loading} className="w-full btn-t-primary py-4 rounded-xl text-sm font-black uppercase tracking-widest flex justify-center items-center gap-2 shadow-lg">
+                                        {loading ? <i data-lucide="loader-2" className="animate-spin w-5 h-5"></i> : <><i data-lucide="send" className="w-5 h-5"></i> TRANSMITIR DADOS</>}
                                     </button>
                                 </div>
                             )}
                         </main>
 
-                        <footer className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-slate-200 flex gap-4 z-50 max-w-2xl mx-auto">
-                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-slate-200 p-4 rounded-xl text-sm font-black uppercase text-slate-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" className="inline mb-1"></i> Voltar</button>}
-                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-slate-800 text-white p-4 rounded-xl text-sm font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md">Avançar <i data-lucide="chevron-right" className="inline mb-1"></i></button>}
+                        <footer className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-200 flex gap-2 z-50 max-w-2xl mx-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                            {step > 0 && <button onClick={() => setStep(step - 1)} className="flex-1 bg-slate-200 p-3 rounded-lg text-xs font-black uppercase text-slate-600 active:scale-95 transition-transform"><i data-lucide="chevron-left" className="inline mb-0.5 w-4 h-4"></i> Voltar</button>}
+                            {!isFinal && <button onClick={() => setStep(step + 1)} className="flex-[2] bg-slate-800 text-white p-3 rounded-lg text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md">Avançar <i data-lucide="chevron-right" className="inline mb-0.5 w-4 h-4"></i></button>}
                         </footer>
                     </div>
                 );
             }
 
             if (view === 'sucesso') return (
-                <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 text-center animate-fade">
-                    <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-inner"><i data-lucide="check-circle" className="w-12 h-12"></i></div>
-                    <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-tight mb-2">VERIFICAÇÃO<br/>CONCLUÍDA</h1>
-                    <p className="text-slate-500 mb-10 text-sm font-bold">O checklist foi validado e transmitido.</p>
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 text-center animate-fade">
+                    <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-5 shadow-inner"><i data-lucide="check-circle" className="w-10 h-10"></i></div>
+                    <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-tight mb-2">VERIFICAÇÃO<br/>CONCLUÍDA</h1>
+                    <p className="text-slate-500 mb-8 text-xs font-bold">O checklist foi validado e transmitido.</p>
                     
-                    <div className="space-y-4 w-full max-w-xs">
+                    <div className="space-y-3 w-full max-w-xs">
                         <button onClick={sendWhatsApp} type="button" className="w-full bg-[#25D366] text-white font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg border-bottom border-b-4 border-[#128C7E]">
-                            <i data-lucide="share-2"></i> Reportar no WhatsApp
+                            <i data-lucide="share-2" className="w-5 h-5"></i> Reportar no WhatsApp
                         </button>
                         <button onClick={() => { setView('menu'); window.location.reload(); }} type="button" className="w-full bg-slate-200 text-slate-700 font-black py-4 rounded-xl active:scale-95 transition-all text-sm uppercase tracking-widest">
                             Início
