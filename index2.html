@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HACO - AMBULÂNCIAS (V20.5)</title>
+    <title>Ambulâncias HACO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -45,7 +45,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect } = React;
 
         // ⚠️ COLE SUA URL DO GOOGLE APPS SCRIPT/API AQUI ⚠️
         const API_URL = "SUA_URL_AQUI";
@@ -57,7 +57,7 @@
             { id: 'avancada_paje', label: 'PAJÉ (TÁTICA)', bg: 'bg-[#059669]', border: 'border-emerald-300', tColor: 'text-white' }
         ];
 
-        const CATEGORIES = ["Status Geral", "Módulos da Mochila", "Medicação & DEA", "Gases & Trauma", "Finalização"];
+        const CATEGORIES = ["Verificação Geral", "Módulos da Mochila", "Medicação & DEA", "Gases & Trauma", "Finalização"];
 
         const CHECKLIST = [
             { id: 'radio', n: 'Rádio Comunicador', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
@@ -81,70 +81,36 @@
             { id: 'o2_p', n: 'O2 Portátil', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['MC>40', 'TROCA', 'FA'] },
             { id: 'imob_kit', n: 'Kit Trauma (Prancha/Colares)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             
-            { id: 'parede_kit', n: 'Aspirador / Fluxômetros', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'gaveta_kit', n: 'Lanterna', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }
+            { id: 'parede_kit', n: 'Aspirador / Fluxômetros', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }
         ];
 
         function App() {
             const [view, setView] = useState('menu'); 
-            const [tab, setTab] = useState('monitor');
             const [vSel, setVSel] = useState(null);
             const [step, setStep] = useState(0);
-            const [db, setDb] = useState([]);
             const [loading, setLoading] = useState(false);
-            const [form, setForm] = useState({ placa: '', posto: '', guerra: '', motorista: '', lacre: '', obs: '', items: {} });
+            const [form, setForm] = useState({ data: '', hora: '', placa: '', posto: '', guerra: '', motorista: '', lacre: '', obs: '', items: {} });
 
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step, db, tab]);
-
-            const audit = useMemo(() => {
-                if (!db.length) return { op: 0, shifts: {}, history: [] };
-                
-                const today = new Date().toLocaleDateString('pt-BR');
-                const conformeOptions = ['OK', 'COMPLETA', 'C/ LACRE', 'LACRADO', 'MC>20', 'MC>40'];
-                const falhaOptions = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'];
-                
-                const total = db.filter(d => d[4] !== 'INFO').length;
-                const oks = db.filter(d => conformeOptions.includes(d[5]?.trim().toUpperCase())).length;
-                
-                const historyMap = db.reduce((acc, d) => {
-                    if(d[4] === 'INFO') return acc;
-                    const k = `${d[0]}_${d[2]}`;
-                    if (!acc[k]) acc[k] = { ts: d[0], v: d[1], p: d[2], r: d[3], alertas: [] };
-                    if (falhaOptions.includes(d[5]?.trim().toUpperCase())) {
-                        acc[k].alertas.push({ nome: d[4], status: d[5], obs: d[6] || '' }); 
-                    }
-                    return acc;
-                }, {});
-
-                const shifts = {};
-                VIATURAS.forEach(v => {
-                    const logs = db.filter(d => d[1] === v.label && d[0].includes(today));
-                    const check = (s, e) => {
-                        const l = logs.find(d => { 
-                            const match = d[0].match(/(\d{2}):/);
-                            if(!match) return false;
-                            return parseInt(match[1]) >= s && parseInt(match[1]) < e;
-                        });
-                        return l ? { ok: true, u: l[3] } : { ok: false };
-                    };
-                    shifts[v.label] = { M: check(7, 13), T: check(13, 19), N: check(19, 24) || check(0, 7) };
-                });
-
-                return { op: total > 0 ? Math.round((oks / total) * 100) : 0, shifts, history: Object.values(historyMap).reverse() };
-            }, [db]);
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [view, step]);
 
             const start = (v) => {
                 const items = {};
                 CHECKLIST.filter(i => i.vias.includes(v.id)).forEach(i => items[i.id] = { status: i.opts[0], obs: '' });
-                setForm({ placa: '', posto: '', guerra: '', motorista: '', lacre: '', obs: '', items });
+                
+                // Gera Data e Hora atuais
+                const now = new Date();
+                const dataFormatada = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const horaFormatada = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+                setForm({ data: dataFormatada, hora: horaFormatada, placa: '', posto: '', guerra: '', motorista: '', lacre: '', obs: '', items });
                 setVSel(v);
                 setStep(0);
                 setView('form');
             };
 
             const checkBloqueios = () => {
-                if(!form.placa || !form.posto || !form.guerra || !form.motorista) {
-                    alert("⚠️ BLOQUEIO: Identificação da Viatura, Responsável ou Motorista incompleta.");
+                if(!form.placa || !form.posto || !form.guerra || !form.motorista || !form.data || !form.hora) {
+                    alert("⚠️ BLOQUEIO: Preencha a Data, Hora, Identificação da Viatura, Responsável e Motorista.");
                     return false;
                 }
                 const statusCriticos = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'];
@@ -164,7 +130,14 @@
                 const obsComLacre = form.lacre ? `LACRE MOCHILA: ${form.lacre} | ${form.obs}` : form.obs;
                 
                 const payload = {
-                    action: 'write', tipo: vSel.label, placa: form.placa, resp: `${form.posto} ${form.guerra}`, motorista: form.motorista, obsGerais: obsComLacre,
+                    action: 'write', 
+                    tipo: vSel.label, 
+                    dataVerificacao: form.data,
+                    horaVerificacao: form.hora,
+                    placa: form.placa, 
+                    resp: `${form.posto} ${form.guerra}`, 
+                    motorista: form.motorista, 
+                    obsGerais: obsComLacre,
                     items: Object.entries(form.items).map(([id, v]) => ({ nome: CHECKLIST.find(i => i.id === id).n, status: v.status, obs: v.obs }))
                 };
                 try {
@@ -182,12 +155,15 @@
             const sendWhatsApp = () => {
                 const falhas = Object.entries(form.items).filter(([id, v]) => ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(v.status));
                 
-                let texto = `*CHECKLIST HACO - ${vSel.label}*\n`;
+                const dataPtBr = form.data.split('-').reverse().join('/');
+
+                let texto = `*CHECKLIST AMBULÂNCIAS HACO - ${vSel.label}*\n`;
+                texto += `📅 Data: ${dataPtBr} às ${form.hora}\n`;
                 texto += `🚑 VTR: ${form.placa}\n`;
                 texto += `🧑‍⚕️ Resp: ${form.posto} ${form.guerra}\n`;
                 texto += `👨‍✈️ Mot: ${form.motorista}\n`;
                 if(form.lacre) texto += `🔒 Lacre Mochila: ${form.lacre}\n`;
-                texto += `📅 Hora: ${new Date().toLocaleTimeString('pt-BR')}\n\n`;
+                texto += `\n`;
                 
                 if (falhas.length === 0) {
                     texto += `✅ *VIATURA CONFORME - 100% OPERACIONAL*\n`;
@@ -205,23 +181,12 @@
                 window.open(url, '_blank');
             };
 
-            const sync = async () => {
-                if(API_URL === "SUA_URL_AQUI") return alert("Configure a API_URL para acessar o painel.");
-                setLoading(true);
-                try {
-                    const r = await fetch(`${API_URL}?action=read&t=${Date.now()}`);
-                    setDb(await r.json());
-                    setView('admin');
-                } catch (e) { alert("FALHA DE SINCRONIZAÇÃO."); }
-                setLoading(false);
-            };
-
             if (view === 'menu') return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-6 space-y-12 animate-fade bg-slate-50">
                     <div className="text-center space-y-3">
                         <div className="bg-[#003366] w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl"><i data-lucide="activity" className="text-white w-10 h-10"></i></div>
-                        <h1 className="text-4xl font-black uppercase tracking-tight text-[#003366]">AMBULÂNCIAS <span className="text-red-600">HACO</span></h1>
-                        <p className="text-slate-500 font-mono text-xs uppercase tracking-widest font-bold">Checklist Operacional de Viatura</p>
+                        <h1 className="text-4xl font-black uppercase tracking-tight text-[#003366]">Ambulâncias <span className="text-red-600">HACO</span></h1>
+                        <p className="text-slate-500 font-mono text-xs uppercase tracking-widest font-bold">Verificação geral de Ambulâncias</p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
                         {VIATURAS.map(v => (
@@ -231,9 +196,6 @@
                             </button>
                         ))}
                     </div>
-                    <button onClick={sync} className="text-slate-400 font-bold uppercase text-[10px] tracking-widest pt-10 border-t border-slate-200 w-full max-w-xs flex items-center justify-center gap-2 hover:text-[#003366]">
-                        <i data-lucide="monitor" className="w-4 h-4"></i> Painel de Operações (TV)
-                    </button>
                 </div>
             );
 
@@ -257,7 +219,13 @@
 
                             {step === 0 && (
                                 <div className="space-y-4 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase">Identificação da Viatura</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase"><i data-lucide="calendar" className="w-3 h-3 inline"></i> Data e Hora da Verificação</label>
+                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                        <input type="date" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold text-slate-900 focus:border-[#003366] outline-none" value={form.data} onChange={e => setForm({...form, data: e.target.value})} />
+                                        <input type="time" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-bold text-slate-900 focus:border-[#003366] outline-none" value={form.hora} onChange={e => setForm({...form, hora: e.target.value})} />
+                                    </div>
+
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mt-4">Identificação da Viatura</label>
                                     <input type="text" placeholder="EX: VTR-01 / PLACA" className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-lg font-mono font-bold text-xl uppercase text-slate-900 focus:border-[#003366] outline-none" value={form.placa} onChange={e => setForm({...form, placa: e.target.value.toUpperCase()})} />
                                     
                                     {vSel.id !== 'avancada_upa' && (
