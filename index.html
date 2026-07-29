@@ -56,12 +56,14 @@
             { id: 'avancada_paje', label: 'PAJÉ (TÁTICA)', bg: 'bg-[#059669]', border: 'border-emerald-300', tColor: 'text-white' }
         ];
 
-        const CATEGORIES = ["Verificação Geral", "Módulos da Mochila", "Medicação & DEA", "Gases & Trauma", "Finalização"];
+        const CATEGORIES = ["Verificação Geral", "Kits & Módulos", "Equipamentos & Medicação", "Gases & Trauma", "Finalização"];
 
         const CHECKLIST = [
+            // CAT 0: Verificação Geral
             { id: 'radio', n: 'Rádio Comunicador', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'bvm_kits', n: 'AMBU/BVM (Ad/Ped/Neo)', cat: 0, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             
+            // CAT 1: Kits & Módulos
             { id: 'mod_epi', n: 'Módulo: EPI', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_sv', n: 'Módulo: SINAIS VITAIS', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_curativo', n: 'Módulo: CURATIVO', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
@@ -70,16 +72,27 @@
             { id: 'mod_calor', n: 'Módulo: CALOR', cat: 1, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_sutura', n: 'Módulo: SUTURA', cat: 1, vias: ['avancada_paje'], opts: ['OK', 'FA'] },
             { id: 'mod_puncao', n: 'Módulo: PUNÇÃO', cat: 1, vias: ['avancada_paje'], opts: ['OK', 'FA'] },
-            { id: 'kit_upa', n: 'Kits Padrão UPA', cat: 1, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
             
-            { id: 'med_geral', n: 'Medicação de Rotina', cat: 2, vias: ['avancada_upa'], opts: ['COMPLETA', 'FA'] },
-            { id: 'med_ctrl', n: 'Psicotrópicos/Controlados', cat: 2, vias: ['avancada_upa'], opts: ['C/ LACRE', 'S/ LACRE', 'FA'] },
-            { id: 'dea_kit', n: 'DEA (Pás e Bateria)', cat: 2, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
+            // CAT 1: Avançada UPA (Gavetas e Estojos)
+            { id: 'kit_upa_intubacao', n: 'Kit Intubação Adulto', cat: 1, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
+            { id: 'kit_upa_puncao', n: 'Kit Punção e Soluções', cat: 1, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
+            { id: 'kit_upa_curativo', n: 'Ataduras e Curativos', cat: 1, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
             
+            // CAT 2: Equipamentos & Medicação
+            { id: 'dea_kit', n: 'DEA (Pás e Bateria)', cat: 2, vias: ['basica_upi', 'avancada_paje'], opts: ['OK', 'TROCA NECESSÁRIA', 'FA'] },
+            
+            // CAT 2: Avançada UPA (Equipamentos de Suporte Avançado)
+            { id: 'monitor_zoll', n: 'Monitor ZOLL / Desfibrilador', cat: 2, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
+            { id: 'ventilador', n: 'Ventilador de Transporte', cat: 2, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
+            { id: 'bombas_infusao', n: 'Bombas de Infusão', cat: 2, vias: ['avancada_upa'], opts: ['OK', 'FA'] },
+            { id: 'mochila_med', n: 'Mochila Medicações (Checklist Físico)', cat: 2, vias: ['avancada_upa'], opts: ['CONFERIDA', 'FA'] },
+            
+            // CAT 3: Gases & Trauma
             { id: 'o2_g', n: 'O2 Rede (Torpedo Grande)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['MC>20', 'TROCA', 'FA'] },
             { id: 'o2_p', n: 'O2 Portátil', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['MC>40', 'TROCA', 'FA'] },
-            { id: 'imob_kit', n: 'Kit Trauma (Prancha/Colares)', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
+            { id: 'imob_kit', n: 'Prancha, Colares e Coxins', cat: 3, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] },
             
+            // CAT 4: Parede
             { id: 'parede_kit', n: 'Aspirador / Fluxômetros', cat: 4, vias: ['basica_upi', 'avancada_upa', 'avancada_paje'], opts: ['OK', 'FA'] }
         ];
 
@@ -262,7 +275,6 @@
                                 <div key={i.id} className={`${isModuleClass} space-y-3`}>
                                     <span className={`font-black text-xs uppercase tracking-wider block ${step === 1 && vSel.id !== 'avancada_upa' ? 'text-center text-[#003366]' : 'text-slate-700'}`}>{i.n}</span>
                                     
-                                    {/* FLEX-WRAP AQUI - Garante que os botões não vazem pra fora da tela no mobile */}
                                     <div className="flex flex-wrap gap-1.5 pt-1">
                                         {i.opts.map(opt => {
                                             const isF = ['FA', 'FALTA', 'S/ LACRE', 'TROCA', 'TROCA NECESSÁRIA'].includes(opt);
